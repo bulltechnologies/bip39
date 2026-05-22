@@ -1,3 +1,16 @@
+## 1.2.0
+
+### BIP39 compliance (defaults)
+- [Bip39SeedOptions.defaults] and top-level [mnemonicToSeed] / [mnemonicToSeedHex] use [Bip39SeedEncoding.bip39Compliant] (NFKD + UTF-8) and [Bip39Kdf.pbkdf2] (HMAC-SHA512, 2048 iterations, 64-byte seed) per the [BIP39 spec](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
+- Trezor English and Japanese vector suites pass with default options (no encoding or KDF overrides).
+- [Bip39SeedOptions.legacyDefaults] for dart-bitcoin 1.0.x / Trezor ASCII `codeUnits` mnemonic encoding.
+
+### Optional Argon2id
+- [Bip39Kdf.argon2id] opt-in via [Bip39SeedOptions.argon2], `kdf: Bip39Kdf.argon2id`, or `argon2Params` on [Bip39SeedOptions].
+- [Bip39Argon2Params] for cost tuning (~64 MiB, 4 lanes, 4 iterations by default); [Bip39Argon2Params.test] for fast unit tests.
+- Implemented with pointycastle Argon2id (no extra dependency).
+- [MIGRATION.md](MIGRATION.md): detailed upgrade guide (emphasis on dart-bitcoin 1.0.0 wallet compatibility).
+
 ## 1.1.0
 
 Maintained fork under [bulltechnologies/bip39](https://github.com/bulltechnologies/bip39), based on [dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39).
@@ -12,7 +25,7 @@ Maintained fork under [bulltechnologies/bip39](https://github.com/bulltechnologi
 ### BIP39 correctness
 - Fix CSPRNG off-by-one: all byte values 0–255 are reachable in `generateMnemonic`.
 - Replace debug-only `assert` on `strength` with `Bip39InvalidStrengthException` at runtime.
-- Default [Bip39SeedOptions] uses [Bip39SeedEncoding.bip39Compliant]; top-level API still defaults to `legacy`.
+- [Bip39SeedOptions] uses [Bip39SeedEncoding.bip39Compliant] for the facade API.
 - NFKD per-word normalization before wordlist lookup ([normalizeWords], default `true`).
 - Japanese mnemonics encode with U+3000 separators by default ([useIdeographicSeparator]).
 - Invalid entropy hex throws [Bip39InvalidEntropyException] instead of [FormatException].

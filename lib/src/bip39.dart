@@ -6,6 +6,8 @@ import 'bip39_exceptions.dart';
 import 'bip39_options.dart';
 import 'core/mnemonic_codec.dart';
 import 'security/memory.dart';
+import 'bip39_kdf.dart';
+import 'utils/argon2.dart';
 import 'utils/pbkdf2.dart';
 import 'wordlists/bip39_language.dart';
 import 'wordlists/bip39_wordlist.dart';
@@ -14,6 +16,7 @@ import 'wordlists/bip39_wordlists.dart';
 export 'bip39_constants.dart';
 export 'bip39_encoding.dart';
 export 'bip39_exceptions.dart';
+export 'bip39_kdf.dart';
 export 'bip39_options.dart';
 export 'core/mnemonic_codec.dart';
 export 'security/memory.dart';
@@ -115,8 +118,9 @@ abstract final class Bip39 {
       codec(options.language)
           .validateMnemonicDetailed(mnemonic, options: options);
 
-  /// 64-byte seed via PBKDF2-HMAC-SHA512 (2048 iterations).
+  /// 64-byte seed via [Bip39SeedOptions.kdf] (BIP39 PBKDF2 by default).
   ///
+  /// Use [Bip39SeedOptions.argon2] for optional Argon2id.
   /// The returned [Uint8List] is a copy; call [zeroizeBytes] when finished, or
   /// use [mnemonicToSeedSensitive] for explicit lifecycle control.
   static Uint8List mnemonicToSeed(
@@ -149,7 +153,14 @@ abstract final class Bip39 {
     final password = encodeMnemonicForSeed(mnemonic, options.seedEncoding);
     final salt = encodeSaltForSeed(options.passphrase, options.seedEncoding);
     try {
-      return PBKDF2.instance.processBytes(password, salt);
+      return switch (options.kdf) {
+        Bip39Kdf.pbkdf2 => PBKDF2.instance.processBytes(password, salt),
+        Bip39Kdf.argon2id => Argon2.instance.processBytes(
+            password,
+            salt,
+            params: options.argon2Params,
+          ),
+      };
     } finally {
       if (options.zeroizeIntermediateBuffers) {
         zeroizeBytes(password);
@@ -197,18 +208,21 @@ String entropyToMnemonicFromBytes(
 
 /// See [Bip39.mnemonicToSeed].
 ///
-/// Defaults to [Bip39SeedEncoding.legacy] for Trezor / 1.0.x compatibility.
-/// Prefer [Bip39.mnemonicToSeed] with [Bip39SeedOptions.defaults] for new code.
+/// Defaults to [Bip39SeedEncoding.bip39Compliant] and [Bip39Kdf.pbkdf2] per BIP39.
 Uint8List mnemonicToSeed(
   String mnemonic, {
   String passphrase = '',
-  Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.legacy,
+  Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
+  Bip39Kdf kdf = Bip39Kdf.pbkdf2,
+  Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
 }) =>
     Bip39.mnemonicToSeed(
       mnemonic,
       options: Bip39SeedOptions(
         passphrase: passphrase,
         seedEncoding: seedEncoding,
+        kdf: kdf,
+        argon2Params: argon2Params,
         zeroizeIntermediateBuffers: true,
       ),
     );
@@ -218,12 +232,16 @@ SensitiveBytes mnemonicToSeedSensitive(
   String mnemonic, {
   String passphrase = '',
   Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
+  Bip39Kdf kdf = Bip39Kdf.pbkdf2,
+  Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
 }) =>
     Bip39.mnemonicToSeedSensitive(
       mnemonic,
       options: Bip39SeedOptions(
         passphrase: passphrase,
         seedEncoding: seedEncoding,
+        kdf: kdf,
+        argon2Params: argon2Params,
       ),
     );
 
@@ -231,13 +249,17 @@ SensitiveBytes mnemonicToSeedSensitive(
 String mnemonicToSeedHex(
   String mnemonic, {
   String passphrase = '',
-  Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.legacy,
+  Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
+  Bip39Kdf kdf = Bip39Kdf.pbkdf2,
+  Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
 }) =>
     Bip39.mnemonicToSeedHex(
       mnemonic,
       options: Bip39SeedOptions(
         passphrase: passphrase,
         seedEncoding: seedEncoding,
+        kdf: kdf,
+        argon2Params: argon2Params,
       ),
     );
 

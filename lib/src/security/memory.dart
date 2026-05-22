@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 /// Overwrites every byte in [bytes] with zero.
 ///
-/// Use on [Uint8List] buffers that held entropy, seeds, PBKDF2 passwords, or
+/// Use on [Uint8List] buffers that held entropy, seeds, KDF passwords, or
 /// salts. Has no effect when [bytes] is `null` or empty.
 ///
 /// **Limits (Dart VM):** This cannot erase [String] instances (mnemonics,

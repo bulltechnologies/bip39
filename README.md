@@ -14,7 +14,7 @@ Maintained by **[bulltechnologies](https://github.com/bulltechnologies)** — fo
 
 ```yaml
 dependencies:
-  bip39: ^1.1.0
+  bip39: ^1.2.0
 ```
 
 **Git** (current source of truth):
@@ -24,7 +24,7 @@ dependencies:
   bip39:
     git:
       url: https://github.com/bulltechnologies/bip39.git
-      ref: v1.1.0 # or a commit SHA on master
+      ref: v1.2.0 # or a commit SHA on master
 ```
 
 ```bash
@@ -39,14 +39,14 @@ import 'package:bip39/bip39.dart';
 // English mnemonic (12 words, 128-bit entropy)
 final mnemonic = generateMnemonic();
 
-// 64-byte seed (PBKDF2-HMAC-SHA512, 2048 iterations)
+// 64-byte seed (BIP39 PBKDF2 + NFKD/UTF-8 by default)
 final seed = mnemonicToSeed(mnemonic, passphrase: 'optional');
 
 // Hex seed for logging-free copy paths
 final seedHex = mnemonicToSeedHex(mnemonic);
 ```
 
-## Why this fork (1.1.0)
+## Why this fork (1.2.0)
 
 | Area | What you get |
 |------|----------------|
@@ -54,17 +54,20 @@ final seedHex = mnemonicToSeedHex(mnemonic);
 | Correctness | Trezor English + Japanese vector suites; spec-compliant NFKD seed path |
 | API | Layered: top-level helpers, `Bip39` facade, `MnemonicCodec`, raw word arrays |
 | Security | Typed errors, buffer zeroization hooks, documented Dart `String` limits |
-| Compatibility | English defaults and `legacy` seed encoding match pre-fork integrations |
+| KDF | **BIP39 PBKDF2** by default; optional Argon2id for stronger non-standard derivation |
+| Compatibility | Spec-compliant encoding + PBKDF2; `legacyDefaults` for dart-bitcoin 1.0.x seeds |
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release notes.
+See [CHANGELOG.md](CHANGELOG.md) for release notes and **[MIGRATION.md](MIGRATION.md)** for upgrading from dart-bitcoin 1.0.x (wallet seed compatibility, legacy encoding, Argon2 opt-in).
 
 ## Features
 
 - **10 official wordlists** — English, Japanese, Korean, Spanish, Chinese (Simplified/Traditional), French, Italian, Czech, Portuguese
 - **Test vectors** — [Trezor English](https://github.com/trezor/python-mnemonic/blob/master/vectors.json), [Japanese BIP39](https://github.com/bip32JP/bip32JP.github.io/blob/master/test_JP_BIP39.json)
 - **Structured validation** — `validateMnemonicDetailed`, `Bip39FailureReason`, typed exceptions
-- **Seed encoding** — `legacy` (1.0.x / Trezor ASCII) and `bip39Compliant` (NFKD + UTF-8 per spec)
-- **Memory hygiene** — zeroize PBKDF2 intermediates, RNG entropy, and seed `Uint8List`s where possible
+- **BIP39 seed derivation** — PBKDF2-HMAC-SHA512 (2048 iterations) + NFKD/UTF-8 encoding by default
+- **Optional Argon2id** — memory-hard KDF via `Bip39SeedOptions.argon2` (not BIP39-standard)
+- **Seed encoding** — `bip39Compliant` (default) or `legacy` for 1.0.x / Trezor ASCII mnemonics
+- **Memory hygiene** — zeroize KDF intermediates, RNG entropy, and seed `Uint8List`s where possible
 
 ## Wordlists
 
@@ -113,7 +116,7 @@ Same entry points as dart-bitcoin/bip39 1.0.x. Optional `language`, `normalizeIn
 ```dart
 generateMnemonic(strength: 256, language: Bip39Language.spanish);
 validateMnemonic(phrase, language: Bip39Language.french, normalizeInput: true);
-mnemonicToSeedHex(phrase, passphrase: 'TREZOR', seedEncoding: Bip39SeedEncoding.legacy);
+mnemonicToSeedHex(phrase, passphrase: 'TREZOR');
 entropyToMnemonic('00000000000000000000000000000000');
 mnemonicToEntropy(mnemonic);
 ```
@@ -143,7 +146,7 @@ Bip39.mnemonicToSeed(
 | `Bip39MnemonicOptions` | `language`, `strength`, `normalizeInput`, `randomBytes` |
 | `Bip39EntropyOptions` | `language`, `normalizeInput` |
 | `Bip39ValidateOptions` | `language`, `normalizeInput` |
-| `Bip39SeedOptions` | `passphrase`, `seedEncoding`, `zeroizeIntermediateBuffers` |
+| `Bip39SeedOptions` | `passphrase`, `seedEncoding`, `kdf`, `argon2Params`, `zeroizeIntermediateBuffers` |
 
 ### 3. `MnemonicCodec` (per-language)
 
@@ -163,27 +166,45 @@ final ok = codec.validateMnemonicDetailed(mnemonic);
 | Trim / Unicode whitespace | `normalizeInput` | `false` |
 | NFKD per-word lookup | `normalizeWords` | `true` |
 | Japanese U+3000 when encoding | `useIdeographicSeparator` | `true` (Japanese) |
-| PBKDF2 passphrase | `passphrase` | `''` |
-| Seed bytes (`Bip39` API) | `seedEncoding` | `bip39Compliant` |
-| Seed bytes (top-level) | `seedEncoding` | `legacy` |
-| Zeroize PBKDF2 password/salt | `zeroizeIntermediateBuffers` | `true` |
+| Passphrase | `passphrase` | `''` |
+| KDF | `kdf` | `pbkdf2` (BIP39) |
+| Seed encoding | `seedEncoding` | `bip39Compliant` |
+| Argon2id (optional) | `kdf: Bip39Kdf.argon2id` or `Bip39SeedOptions.argon2` | — |
+| Argon2 cost | `argon2Params` | 64 MiB, 4 lanes, 4 iterations |
+| Zeroize KDF password/salt | `zeroizeIntermediateBuffers` | `true` |
 | Custom RNG | `randomBytes` | OS CSPRNG |
 
 Allowed strengths: `128`, `160`, `192`, `224`, `256`.
 
-## Seed encoding
+## Seed derivation
+
+| KDF | Use when |
+|-----|----------|
+| `Bip39Kdf.pbkdf2` (default) | BIP39 spec, Trezor, Ledger, hardware wallets, test vectors |
+| `Bip39Kdf.argon2id` | Optional stronger derivation (seeds differ from standard wallets) |
+
+```dart
+// BIP39 default (PBKDF2 + compliant encoding)
+Bip39.mnemonicToSeed(mnemonic);
+
+// Optional Argon2id
+Bip39.mnemonicToSeed(mnemonic, options: Bip39SeedOptions.argon2);
+```
+
+### Seed encoding
 
 | Mode | Use when |
 |------|----------|
-| `Bip39SeedEncoding.legacy` | Matching dart-bitcoin/bip39 1.0.x, Trezor ASCII vectors, existing app behavior |
-| `Bip39SeedEncoding.bip39Compliant` | Unicode passphrases, hardware-wallet parity, full spec NFKD + UTF-8 |
+| `Bip39SeedEncoding.legacy` | Matching dart-bitcoin/bip39 1.0.x, Trezor ASCII vectors |
+| `Bip39SeedEncoding.bip39Compliant` | Default — NFKD + UTF-8 per BIP39 |
 
 ```dart
-// Top-level defaults to legacy
-mnemonicToSeedHex(m);
-
-// Spec-complete
-mnemonicToSeedHex(m, seedEncoding: Bip39SeedEncoding.bip39Compliant);
+// Trezor-compatible: legacy encoding + PBKDF2
+mnemonicToSeedHex(
+  m,
+  seedEncoding: Bip39SeedEncoding.legacy,
+  kdf: Bip39Kdf.pbkdf2,
+);
 ```
 
 ## Validation
@@ -212,7 +233,7 @@ Dart **cannot** erase `String` mnemonics or passphrases from the heap. The libra
 
 | Buffer | Cleared when |
 |--------|----------------|
-| PBKDF2 password & salt | After `Bip39.mnemonicToSeed` with default `zeroizeIntermediateBuffers` |
+| KDF password & salt | After `Bip39.mnemonicToSeed` with default `zeroizeIntermediateBuffers` |
 | RNG entropy in `Bip39.generateMnemonic` | Always after encoding |
 | Decoded entropy hex | After `entropyToMnemonic` |
 | Internal entropy in `mnemonicToEntropy` | In `finally` after checksum |
@@ -242,15 +263,15 @@ Do not log mnemonics, passphrases, or seeds. Buffer zeroization reduces heap exp
 
 ## Migrating from dart-bitcoin/bip39
 
-| Before (1.0.x) | After (bulltechnologies 1.1.0) |
+**→ Full guide: [MIGRATION.md](MIGRATION.md)** (1.0.0 wallet treatment, golden tests, encoding migration, 1.1/1.2 features).
+
+| Before (1.0.x) | After (bulltechnologies 1.2.0) |
 |----------------|--------------------------------|
 | `import 'package:bip39/bip39.dart'` | Same import |
 | `generateMnemonic()` | Unchanged; add `language:` as needed |
-| `mnemonicToSeed` / `mnemonicToSeedHex` | Still **legacy** by default at top level |
+| `mnemonicToSeed` / `mnemonicToSeedHex` | Default **bip39Compliant** + PBKDF2; **1.0.x wallets must use [Bip39SeedOptions.legacyDefaults]** |
 | English-only | Optional `Bip39Language.*` on all mnemonic APIs |
 | `WORDLIST` | Still exported; prefer `englishWords` |
-
-Change `pubspec.yaml` dependency to bulltechnologies (git URL above or pub.dev once published). No code changes required for typical English + legacy seed paths.
 
 ## Regenerating wordlists
 

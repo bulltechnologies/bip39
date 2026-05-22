@@ -1,7 +1,7 @@
 import 'package:bip39/bip39.dart';
 
 void main() {
-  // --- Top-level API (English default, legacy seed encoding for 1.0.x) ---
+  // --- Top-level API (English default, BIP39-compliant seed encoding) ---
   final mnemonic = generateMnemonic();
   print('English mnemonic: $mnemonic');
 

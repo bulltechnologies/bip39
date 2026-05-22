@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'bip39_encoding.dart';
+import 'bip39_kdf.dart';
 import 'wordlists/bip39_language.dart';
 
 /// Configuration for mnemonic generation ([generateMnemonic]).
@@ -97,29 +98,46 @@ final class Bip39ValidateOptions {
       );
 }
 
-/// Configuration for PBKDF2 seed derivation ([mnemonicToSeed]).
+/// Configuration for seed derivation ([mnemonicToSeed]).
 final class Bip39SeedOptions {
   const Bip39SeedOptions({
     this.passphrase = '',
     this.seedEncoding = Bip39SeedEncoding.bip39Compliant,
+    this.kdf = Bip39Kdf.pbkdf2,
+    this.argon2Params = Bip39Argon2Params.defaults,
     this.zeroizeIntermediateBuffers = true,
   });
 
-  /// BIP39-spec seed encoding (NFKD + UTF-8).
+  /// BIP39 spec: compliant encoding + PBKDF2-HMAC-SHA512 (2048 iterations).
   static const Bip39SeedOptions defaults = Bip39SeedOptions();
 
-  /// Trezor / pre-1.1.0 ASCII-oriented encoding for migration tests.
+  /// Same as [defaults]; explicit alias for BIP39-standard seed derivation.
+  static const Bip39SeedOptions bip39Standard = defaults;
+
+  /// Optional Argon2id KDF with [Bip39SeedEncoding.bip39Compliant] encoding.
+  static const Bip39SeedOptions argon2 = Bip39SeedOptions(
+    kdf: Bip39Kdf.argon2id,
+  );
+
+  /// Trezor / pre-1.1.0 ASCII-oriented encoding with PBKDF2.
   static const Bip39SeedOptions legacyDefaults = Bip39SeedOptions(
     seedEncoding: Bip39SeedEncoding.legacy,
+    kdf: Bip39Kdf.pbkdf2,
   );
 
   /// Optional BIP39 passphrase (often called the "25th word").
   final String passphrase;
 
-  /// Byte encoding for PBKDF2 password and salt.
+  /// Byte encoding for KDF password and salt.
   final Bip39SeedEncoding seedEncoding;
 
-  /// When true, PBKDF2 password and salt [Uint8List] buffers are zeroed after use.
+  /// Key derivation: [Bip39Kdf.pbkdf2] (default) or optional [Bip39Kdf.argon2id].
+  final Bip39Kdf kdf;
+
+  /// Argon2id cost parameters when [kdf] is [Bip39Kdf.argon2id].
+  final Bip39Argon2Params argon2Params;
+
+  /// When true, KDF password and salt [Uint8List] buffers are zeroed after use.
   ///
   /// The returned seed is never auto-zeroized; use [SensitiveBytes] or [zeroizeBytes].
   final bool zeroizeIntermediateBuffers;
@@ -127,11 +145,15 @@ final class Bip39SeedOptions {
   Bip39SeedOptions copyWith({
     String? passphrase,
     Bip39SeedEncoding? seedEncoding,
+    Bip39Kdf? kdf,
+    Bip39Argon2Params? argon2Params,
     bool? zeroizeIntermediateBuffers,
   }) =>
       Bip39SeedOptions(
         passphrase: passphrase ?? this.passphrase,
         seedEncoding: seedEncoding ?? this.seedEncoding,
+        kdf: kdf ?? this.kdf,
+        argon2Params: argon2Params ?? this.argon2Params,
         zeroizeIntermediateBuffers:
             zeroizeIntermediateBuffers ?? this.zeroizeIntermediateBuffers,
       );

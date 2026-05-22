@@ -42,7 +42,7 @@ String mnemonicWordSeparator(
   return ' ';
 }
 
-/// Encode [input] for PBKDF2 password bytes per [encoding].
+/// Encode [input] for KDF password bytes per [encoding].
 ///
 /// Caller should [zeroizeBytes] the returned buffer when done (see [Bip39.mnemonicToSeed]).
 Uint8List encodeMnemonicForSeed(String input, Bip39SeedEncoding encoding) {

@@ -1,6 +1,6 @@
 name: bip39
 description: Production-grade Dart implementation of Bitcoin BIP39 mnemonic codes
-version: 1.1.0
+version: 1.2.0
 homepage: https://github.com/bulltechnologies/bip39
 repository: https://github.com/bulltechnologies/bip39
 issue_tracker: https://github.com/bulltechnologies/bip39/issues

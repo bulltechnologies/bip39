@@ -158,7 +158,7 @@ void main() {
   });
 
   group('seed encoding', () {
-    test('legacy encoding matches Trezor vectors', () {
+    test('matches Trezor vectors with default BIP39 options', () {
       const mnemonic =
           'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
       expect(
@@ -236,7 +236,10 @@ void testVector(List<dynamic> v, int i) {
     });
 
     test('mnemonic to seed hex', () {
-      expect(mnemonicToSeedHex(vmnemonic, passphrase: 'TREZOR'), vseedHex);
+      expect(
+        mnemonicToSeedHex(vmnemonic, passphrase: 'TREZOR'),
+        vseedHex,
+      );
     });
 
     test('entropy to mnemonic', () {
