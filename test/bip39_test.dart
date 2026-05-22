@@ -2,118 +2,258 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bip39/bip39.dart' as bip39;
+import 'package:bip39/bip39.dart';
 import 'package:hex/hex.dart';
 import 'package:test/test.dart';
 
 void main() {
-  Map<String, dynamic> vectors =
-      json.decode(File('./test/vectors.json').readAsStringSync(encoding: utf8));
+  final vectors = json.decode(
+    File('./test/vectors.json').readAsStringSync(encoding: utf8),
+  ) as Map<String, dynamic>;
 
-  int i = 0;
-  (vectors['english'] as List<dynamic>).forEach((list) {
-    testVector(list, i);
+  var i = 0;
+  for (final list in vectors['english'] as List<dynamic>) {
+    testVector(list as List<dynamic>, i);
     i++;
+  }
+
+  group('Bip39 class API', () {
+    test('mirrors top-level English vector', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      expect(
+        Bip39.mnemonicToSeedHex(
+          mnemonic,
+          options: const Bip39SeedOptions(passphrase: 'TREZOR'),
+        ),
+        mnemonicToSeedHex(mnemonic, passphrase: 'TREZOR'),
+      );
+    });
   });
+
   group('invalid entropy', () {
     test('throws for empty entropy', () {
-      try {
-        expect(bip39.entropyToMnemonic(''), throwsArgumentError);
-      } catch (err) {
-        expect((err as ArgumentError).message, "Invalid entropy");
-      }
+      expect(
+        () => entropyToMnemonic(''),
+        throwsA(isA<Bip39InvalidEntropyException>()),
+      );
     });
 
-    test('throws for entropy that\'s not a multitude of 4 bytes', () {
-      try {
-        expect(bip39.entropyToMnemonic('000000'), throwsArgumentError);
-      } catch (err) {
-        expect((err as ArgumentError).message, "Invalid entropy");
-      }
+    test('throws for entropy that is not a multiple of 4 bytes', () {
+      expect(
+        () => entropyToMnemonic('000000'),
+        throwsA(isA<Bip39InvalidEntropyException>()),
+      );
     });
 
-    test('throws for entropy that is larger than 1024', () {
-      try {
-        expect(bip39.entropyToMnemonic(Uint8List(1028 + 1).join('00')),
-            throwsArgumentError);
-      } catch (err) {
-        expect((err as ArgumentError).message, "Invalid entropy");
-      }
+    test('throws for entropy larger than 32 bytes', () {
+      expect(
+        () => entropyToMnemonic('00' * 66),
+        throwsA(isA<Bip39InvalidEntropyException>()),
+      );
+    });
+
+    test('throws for non-hex entropy', () {
+      expect(
+        () => entropyToMnemonic('gg'),
+        throwsA(isA<Bip39InvalidEntropyException>()),
+      );
     });
   });
-  test('validateMnemonic', () {
-    expect(bip39.validateMnemonic('sleep kitten'), isFalse,
-        reason: 'fails for a mnemonic that is too short');
 
-    expect(bip39.validateMnemonic('sleep kitten sleep kitten sleep kitten'),
-        isFalse,
-        reason: 'fails for a mnemonic that is too short');
+  group('validateMnemonic', () {
+    test('fails for a mnemonic that is too short', () {
+      expect(validateMnemonic('sleep kitten'), isFalse);
+    });
 
-    expect(
-        bip39.validateMnemonic(
-            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about end grace oxygen maze bright face loan ticket trial leg cruel lizard bread worry reject journey perfect chef section caught neither install industry'),
+    test('fails for repeated short phrase', () {
+      expect(
+        validateMnemonic('sleep kitten sleep kitten sleep kitten'),
         isFalse,
-        reason: 'fails for a mnemonic that is too long');
+      );
+    });
 
-    expect(
-        bip39.validateMnemonic(
-            'turtle front uncle idea crush write shrug there lottery flower risky shell'),
-        isFalse,
-        reason: 'fails if mnemonic words are not in the word list');
+    test('fails for a mnemonic that is too long', () {
+      expect(validateMnemonic('abandon ' * 500 + 'about'), isFalse);
+    });
 
-    expect(
-        bip39.validateMnemonic(
-            'sleep kitten sleep kitten sleep kitten sleep kitten sleep kitten sleep kitten'),
+    test('fails if mnemonic words are not in the word list', () {
+      expect(
+        validateMnemonic(
+          'turtle front uncle idea crush write shrug there lottery flower risky shell',
+        ),
         isFalse,
-        reason: 'fails for invalid checksum');
+      );
+    });
+
+    test('fails for invalid checksum', () {
+      expect(
+        validateMnemonic(
+          'sleep kitten sleep kitten sleep kitten sleep kitten sleep kitten sleep kitten',
+        ),
+        isFalse,
+      );
+    });
   });
+
+  group('validateMnemonicDetailed', () {
+    test('reports unknown word', () {
+      final result = validateMnemonicDetailed(
+        List.filled(12, 'notaword').join(' '),
+      );
+      expect(result.isValid, isFalse);
+      expect(result.reason, Bip39FailureReason.unknownWord);
+      expect(result.unknownWord, 'notaword');
+    });
+
+    test('reports invalid checksum', () {
+      final result = validateMnemonicDetailed(
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon',
+      );
+      expect(result.isValid, isFalse);
+      expect(result.reason, Bip39FailureReason.invalidChecksum);
+    });
+  });
+
   group('generateMnemonic', () {
     test('can vary entropy length', () {
-      final words = (bip39.generateMnemonic(strength: 160)).split(' ');
-      expect(words.length, equals(15),
-          reason: 'can vary generated entropy bit length');
+      final words = generateMnemonic(strength: 160).split(' ');
+      expect(words.length, 15);
     });
 
     test('requests the exact amount of data from an RNG', () {
-      bip39.generateMnemonic(
-          strength: 160,
-          randomBytes: (int size) {
-            expect(size, 160 / 8);
-            return Uint8List(size);
-          });
+      generateMnemonic(
+        strength: 160,
+        randomBytes: (int size) {
+          expect(size, 20);
+          return Uint8List(size);
+        },
+      );
+    });
+
+    test('throws for invalid strength', () {
+      expect(
+        () => generateMnemonic(strength: 136),
+        throwsA(isA<Bip39InvalidStrengthException>()),
+      );
+    });
+
+    test('RandomBytes may use byte value 255 in entropy', () {
+      final mnemonic = generateMnemonic(
+        strength: 128,
+        randomBytes: (int size) => Uint8List(size)..[0] = 255,
+      );
+      expect(mnemonicToEntropy(mnemonic).startsWith('ff'), isTrue);
+    });
+  });
+
+  group('normalizeInput', () {
+    test('accepts extra whitespace when enabled', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      expect(validateMnemonic(mnemonic, normalizeInput: true), isTrue);
+      expect(validateMnemonic('  $mnemonic  ', normalizeInput: true), isTrue);
+      expect(validateMnemonic('  $mnemonic  ', normalizeInput: false), isFalse);
+    });
+  });
+
+  group('seed encoding', () {
+    test('legacy encoding matches Trezor vectors', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      expect(
+        mnemonicToSeedHex(mnemonic, passphrase: 'TREZOR'),
+        'c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04',
+      );
+    });
+
+    test('ASCII mnemonic and passphrase match across encodings', () {
+      const mnemonic =
+          'legal winner thank year wave sausage worth useful legal winner thank yellow';
+      expect(
+        mnemonicToSeedHex(mnemonic, passphrase: 'TREZOR'),
+        mnemonicToSeedHex(
+          mnemonic,
+          passphrase: 'TREZOR',
+          seedEncoding: Bip39SeedEncoding.bip39Compliant,
+        ),
+      );
+    });
+
+    test('Unicode passphrase differs between legacy and BIP39 encoding', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      final legacy = mnemonicToSeedHex(
+        mnemonic,
+        passphrase: 'café',
+        seedEncoding: Bip39SeedEncoding.legacy,
+      );
+      final compliant = mnemonicToSeedHex(
+        mnemonic,
+        passphrase: 'café',
+        seedEncoding: Bip39SeedEncoding.bip39Compliant,
+      );
+      expect(legacy, isNot(compliant));
+    });
+  });
+
+  group('entropyToMnemonicFromBytes', () {
+    test('matches hex path', () {
+      const hex = '00000000000000000000000000000000';
+      expect(
+        entropyToMnemonicFromBytes(Uint8List.fromList(HEX.decode(hex))),
+        entropyToMnemonic(hex),
+      );
+    });
+  });
+
+  group('exception compatibility', () {
+    test('invalid mnemonic is ArgumentError', () {
+      expect(
+        () => mnemonicToEntropy(List.filled(12, 'notaword').join(' ')),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('invalid checksum is StateError', () {
+      expect(
+        () => mnemonicToEntropy(
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon',
+        ),
+        throwsA(isA<StateError>()),
+      );
     });
   });
 }
 
 void testVector(List<dynamic> v, int i) {
-  final ventropy = v[0];
-  final vmnemonic = v[1];
-  final vseedHex = v[2];
-  group('for English(${i}), ${ventropy}', () {
-    setUp(() {});
-    test('mnemoic to entropy', () {
-      final String entropy = bip39.mnemonicToEntropy(vmnemonic);
-      expect(entropy, equals(ventropy));
+  final ventropy = v[0] as String;
+  final vmnemonic = v[1] as String;
+  final vseedHex = v[2] as String;
+  group('for English($i), $ventropy', () {
+    test('mnemonic to entropy', () {
+      expect(mnemonicToEntropy(vmnemonic), ventropy);
     });
+
     test('mnemonic to seed hex', () {
-      final seedHex = bip39.mnemonicToSeedHex(vmnemonic, passphrase: "TREZOR");
-      expect(seedHex, equals(vseedHex));
+      expect(mnemonicToSeedHex(vmnemonic, passphrase: 'TREZOR'), vseedHex);
     });
+
     test('entropy to mnemonic', () {
-      final code = bip39.entropyToMnemonic(ventropy);
-      expect(code, equals(vmnemonic));
+      expect(entropyToMnemonic(ventropy), vmnemonic);
     });
-    test('generate mnemonic', () {
-      bip39.RandomBytes randomBytes = (int size) {
-        return Uint8List.fromList(HEX.decode(ventropy));
-      };
-      final code = bip39.generateMnemonic(randomBytes: randomBytes);
-      expect(code, equals(vmnemonic),
-          reason: 'generateMnemonic returns randomBytes entropy unmodified');
+
+    test('generate mnemonic with injected entropy', () {
+      final entropyBytes = Uint8List.fromList(HEX.decode(ventropy));
+      final code = generateMnemonic(
+        strength: entropyBytes.length * 8,
+        randomBytes: (int size) => Uint8List.sublistView(entropyBytes, 0, size),
+      );
+      expect(code, vmnemonic);
     });
+
     test('validate mnemonic', () {
-      expect(bip39.validateMnemonic(vmnemonic), isTrue,
-          reason: 'validateMnemonic returns true');
+      expect(validateMnemonic(vmnemonic), isTrue);
     });
   });
 }

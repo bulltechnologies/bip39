@@ -1,16 +1,40 @@
-import 'package:bip39/bip39.dart' as bip39;
+import 'package:bip39/bip39.dart';
 
-main() async {
-  String randomMnemonic = bip39.generateMnemonic();
-  print(randomMnemonic);
-  String seed = bip39.mnemonicToSeedHex("update elbow source spin squeeze horror world become oak assist bomb nuclear");
-  print(seed);
-  String mnemonic = bip39.entropyToMnemonic('00000000000000000000000000000000');
-  print(mnemonic);
-  bool isValid = bip39.validateMnemonic(mnemonic);
-  print(isValid);
-  isValid = bip39.validateMnemonic('basket actual');
-  print(isValid);
-  String entropy = bip39.mnemonicToEntropy(mnemonic);
-  print(entropy);
+void main() {
+  // --- Top-level API (English default, legacy seed encoding for 1.0.x) ---
+  final mnemonic = generateMnemonic();
+  print('English mnemonic: $mnemonic');
+
+  // --- BIP39 facade: compliant seed + explicit zeroization ---
+  final sensitive = Bip39.mnemonicToSeedSensitive(
+    mnemonic,
+    options: const Bip39SeedOptions(passphrase: 'optional'),
+  );
+  try {
+    print('seed length: ${sensitive.length} bytes');
+  } finally {
+    sensitive.zeroize();
+  }
+
+  // --- Wordlist access ---
+  print('French word count: ${frenchWords.length}');
+  print('First French word: ${Bip39Wordlists.french.words.first}');
+
+  // --- Another language via options ---
+  final spanish = Bip39.generateMnemonic(
+    options: const Bip39MnemonicOptions(
+      language: Bip39Language.spanish,
+      strength: 128,
+    ),
+  );
+  print('Spanish mnemonic: $spanish');
+
+  // --- Japanese: U+3000 separators + NFKD word lookup ---
+  final codec = MnemonicCodec.forLanguage(Bip39Language.japanese);
+  const entropy = '00000000000000000000000000000000';
+  final jp = codec.entropyToMnemonic(entropy);
+  print('Japanese (zero entropy): $jp');
+
+  final detail = validateMnemonicDetailed('basket actual');
+  print('Invalid phrase reason: ${detail.reason}');
 }

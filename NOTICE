@@ -1,0 +1,17 @@
+bip39 — https://github.com/bulltechnologies/bip39
+Copyright (c) 2026 bulltechnologies
+
+This package is a maintained fork of the Dart BIP39 implementation. It
+incorporates code and design lineage from the following upstream projects,
+which remain subject to their respective licenses:
+
+  dart-bitcoin/bip39
+    https://github.com/dart-bitcoin/bip39
+    Copyright (c) 2018 anicdh
+    BSD-3-Clause
+
+  bitcoinjs/bip39 (reference behavior)
+    https://github.com/bitcoinjs/bip39
+
+Official BIP39 wordlists are sourced from the Bitcoin BIPs repository:
+  https://github.com/bitcoin/bips/tree/master/bip-0039
