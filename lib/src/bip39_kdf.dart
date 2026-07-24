@@ -1,4 +1,10 @@
-import 'package:pointycastle/key_derivators/api.dart' show Argon2Parameters;
+/// Argon2 version integers for [Bip39Argon2Params.version].
+///
+/// Matches the wire values used by Argon2 reference implementations (0x10, 0x13).
+abstract final class Bip39Argon2Version {
+  static const int v10 = 0x10;
+  static const int v13 = 0x13;
+}
 
 /// Key derivation function for [Bip39.mnemonicToSeed].
 enum Bip39Kdf {
@@ -16,7 +22,7 @@ final class Bip39Argon2Params {
     this.memoryKiB = 65536,
     this.parallelism = 4,
     this.desiredKeyLength = 64,
-    this.version = Argon2Parameters.ARGON2_VERSION_13,
+    this.version = Bip39Argon2Version.v13,
   });
 
   /// Production-oriented defaults (~64 MiB, 4 lanes, 4 passes).
@@ -41,7 +47,7 @@ final class Bip39Argon2Params {
   /// Derived seed length in bytes.
   final int desiredKeyLength;
 
-  /// Argon2 version constant ([Argon2Parameters.ARGON2_VERSION_13]).
+  /// Argon2 version constant ([Bip39Argon2Version.v13] = 0x13).
   final int version;
 
   Bip39Argon2Params copyWith({

@@ -1,5 +1,6 @@
-import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:native_crypto/native_crypto.dart' show SecureRandom;
 
 import 'bip39_encoding.dart';
 import 'bip39_exceptions.dart';
@@ -40,14 +41,9 @@ export 'wordlists/generated/korean.dart' show koreanWords;
 export 'wordlists/generated/portuguese.dart' show portugueseWords;
 export 'wordlists/generated/spanish.dart' show spanishWords;
 
-Uint8List _defaultRandomBytes(int size) {
-  final rng = Random.secure();
-  final bytes = Uint8List(size);
-  for (var i = 0; i < size; i++) {
-    bytes[i] = rng.nextInt(256);
-  }
-  return bytes;
-}
+final SecureRandom _defaultSecureRandom = SecureRandom();
+
+Uint8List _defaultRandomBytes(int size) => _defaultSecureRandom.bytes(size);
 
 /// High-level BIP39 entry point with explicit wordlist and option objects.
 ///

@@ -1,3 +1,14 @@
+## 2.0.0
+
+### Native crypto backend (breaking)
+- **Flutter-only:** requires Flutter and Dart **≥ 3.12**. Dart VM-only and web targets are unsupported (no pure-Dart fallback).
+- All cryptographic primitives delegate to **[native_crypto](https://github.com/bulltechnologies/native_crypto)** (pinned to commit `12c3b89`): `SecureRandom`, `Sha256`, PBKDF2-HMAC-SHA512, and Argon2id.
+- Removed `crypto` and `pointycastle` dependencies and local pure-Dart KDF implementations.
+- **Seed outputs unchanged:** BIP39 encoding, NFKD normalization, wordlists, checksum logic, `Bip39Kdf`, `Bip39SeedOptions`, legacy profiles, and synchronous public APIs are preserved byte-for-byte.
+- `Bip39Argon2Params.version` remains an `int` (`Bip39Argon2Version.v10` / `v13`); mapped internally to native Argon2 version enums.
+- Synchronous native calls must run from a **persistent background crypto isolate** (not the UI isolate). No async API or automatic isolate wrapper is provided.
+- CI uses Flutter tooling and rejects remaining `crypto` / `pointycastle` imports.
+
 ## 1.2.0
 
 ### BIP39 compliance (defaults)

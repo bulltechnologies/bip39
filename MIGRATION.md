@@ -1,20 +1,58 @@
 # Migration guide
 
-This document covers upgrading from **[dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) 1.0.x** through **bulltechnologies/bip39 1.1.0** and **1.2.0**.
+This document covers upgrading from **[dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) 1.0.x** through **bulltechnologies/bip39 1.1.0**, **1.2.0**, and **2.0.0**.
 
 **Read the [1.0.0 wallet section](#wallets-created-with-dart-bitcoinbip39-100) first if you have live user funds.**
 
 ---
 
+## Upgrading to 2.0.0 (native crypto backend)
+
+### What changed
+
+| Topic | 1.2.0 | 2.0.0 |
+|-------|-------|-------|
+| Runtime | Dart VM / Flutter | **Flutter only** (Dart ≥ 3.12) |
+| Crypto | `crypto` + `pointycastle` (pure Dart) | **[native_crypto](https://github.com/bulltechnologies/native_crypto)** (OS-backed FFI) |
+| Web / Dart-only CLI | Supported | **Unsupported** — fails at build/dependency resolution |
+| Seed bytes | PBKDF2 / Argon2id outputs | **Unchanged** (no wallet migration) |
+| Public API | Synchronous | **Unchanged** (still synchronous) |
+
+### What you must do
+
+1. **Use Flutter** — add `flutter` SDK dependency; remove Dart-only VM or web targets that cannot load `native_crypto`.
+2. **Upgrade SDK** — `environment: sdk: ^3.12.0` and `flutter: ">=3.3.0"`.
+3. **Run crypto off the UI isolate** — `mnemonicToSeed`, `generateMnemonic`, and checksum validation call native FFI synchronously. Invoke them from a **persistent background crypto isolate** (see [native_crypto example](https://github.com/bulltechnologies/native_crypto/tree/main/example/lib/crypto_isolate.dart)). The library does not provide an async wrapper.
+4. **No seed migration** — existing wallets keep the same seeds when using the same `Bip39SeedOptions` profile (`legacyDefaults`, `defaults`, or `argon2`).
+
+### `pubspec.yaml`
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  bip39:
+    git:
+      url: https://github.com/bulltechnologies/bip39.git
+      ref: v2.0.0
+```
+
+### Argon2 version constants
+
+`Bip39Argon2Params.version` is still an `int`. Use `Bip39Argon2Version.v13` (0x13) or `Bip39Argon2Version.v10` (0x10) instead of pointycastle `Argon2Parameters` constants.
+
+---
+
 ## Version map
 
-| Release | Seed encoding default | KDF default | Mnemonic validation |
-|---------|----------------------|-------------|---------------------|
-| **dart-bitcoin 1.0.x** | Implicit `legacy` (`codeUnits` + UTF-8 salt) | PBKDF2 only | English; no NFKD per-word normalization |
-| **bulltechnologies 1.1.0** | Facade: `bip39Compliant`; top-level still `legacy` until 1.2 | PBKDF2 only | NFKD words, 10 languages, typed errors |
-| **bulltechnologies 1.2.0** | `bip39Compliant` everywhere | PBKDF2 (BIP39); optional Argon2id | Same as 1.1 + `Bip39SeedOptions.argon2` |
+| Release | Seed encoding default | KDF default | Mnemonic validation | Runtime |
+|---------|----------------------|-------------|---------------------|---------|
+| **dart-bitcoin 1.0.x** | Implicit `legacy` (`codeUnits` + UTF-8 salt) | PBKDF2 only | English; no NFKD per-word normalization | Dart VM |
+| **bulltechnologies 1.1.0** | Facade: `bip39Compliant`; top-level still `legacy` until 1.2 | PBKDF2 only | NFKD words, 10 languages, typed errors | Dart VM |
+| **bulltechnologies 1.2.0** | `bip39Compliant` everywhere | PBKDF2 (BIP39); optional Argon2id | Same as 1.1 + `Bip39SeedOptions.argon2` | Dart VM |
+| **bulltechnologies 2.0.0** | `bip39Compliant` everywhere | Native PBKDF2 / Argon2id (same outputs) | Unchanged | **Flutter only** |
 
-**1.2.0 defaults match the [BIP39 specification](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)** (NFKD + UTF-8 + PBKDF2-HMAC-SHA512, 2048 iterations). They do **not** automatically match every dart-bitcoin 1.0.x deployment.
+**1.2.0+ defaults match the [BIP39 specification](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)** (NFKD + UTF-8 + PBKDF2-HMAC-SHA512, 2048 iterations). They do **not** automatically match every dart-bitcoin 1.0.x deployment.
 
 ---
 

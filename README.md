@@ -1,35 +1,34 @@
 # bip39
 
-Production-grade [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic generation and seed derivation for Dart and Flutter.
+Production-grade [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic generation and seed derivation for **Flutter**.
 
 [![CI](https://github.com/bulltechnologies/bip39/actions/workflows/ci.yml/badge.svg)](https://github.com/bulltechnologies/bip39/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
-[![Dart SDK](https://img.shields.io/badge/SDK-%3E%3D3.0.0%20%3C4.0.0-blue)](pubspec.yaml)
+[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.3.0-blue)](pubspec.yaml)
 
 Maintained by **[bulltechnologies](https://github.com/bulltechnologies)** — fork of [dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) (originally ported from [bitcoinjs/bip39](https://github.com/bitcoinjs/bip39)).
 
+**2.0.0** delegates all cryptography to **[native_crypto](https://github.com/bulltechnologies/native_crypto)** (OS-backed FFI). Dart VM-only and web targets are not supported.
+
 ## Install
-
-**pub.dev** (when published):
-
-```yaml
-dependencies:
-  bip39: ^1.2.0
-```
 
 **Git** (current source of truth):
 
 ```yaml
 dependencies:
+  flutter:
+    sdk: flutter
   bip39:
     git:
       url: https://github.com/bulltechnologies/bip39.git
-      ref: v1.2.0 # or a commit SHA on master
+      ref: v2.0.0
 ```
 
 ```bash
-dart pub get
+flutter pub get
 ```
+
+Requires **Flutter ≥ 3.3.0** and **Dart ≥ 3.12.0**.
 
 ## Quick start
 
@@ -46,25 +45,29 @@ final seed = mnemonicToSeed(mnemonic, passphrase: 'optional');
 final seedHex = mnemonicToSeedHex(mnemonic);
 ```
 
-## Why this fork (1.2.0)
+### Crypto isolate (required for production)
+
+Native FFI calls are **synchronous** and must not run on the UI isolate. Spawn a persistent background crypto isolate and invoke `Bip39` APIs from there. See [native_crypto's crypto isolate example](https://github.com/bulltechnologies/native_crypto/blob/main/example/lib/crypto_isolate.dart). This package does not provide an async wrapper.
+
+## Why this fork (2.0.0)
 
 | Area | What you get |
 |------|----------------|
 | Wordlists | All **10** official BIP39 languages with O(1) lookup |
 | Correctness | Trezor English + Japanese vector suites; spec-compliant NFKD seed path |
 | API | Layered: top-level helpers, `Bip39` facade, `MnemonicCodec`, raw word arrays |
-| Security | Typed errors, buffer zeroization hooks, documented Dart `String` limits |
-| KDF | **BIP39 PBKDF2** by default; optional Argon2id for stronger non-standard derivation |
+| Security | Native CSPRNG / SHA-256 / PBKDF2 / Argon2id; buffer zeroization hooks |
+| KDF | **BIP39 PBKDF2** by default; optional Argon2id (same outputs as 1.2.0) |
 | Compatibility | Spec-compliant encoding + PBKDF2; `legacyDefaults` for dart-bitcoin 1.0.x seeds |
 
-See [CHANGELOG.md](CHANGELOG.md) for release notes and **[MIGRATION.md](MIGRATION.md)** for upgrading from dart-bitcoin 1.0.x (wallet seed compatibility, legacy encoding, Argon2 opt-in).
+See [CHANGELOG.md](CHANGELOG.md) for release notes and **[MIGRATION.md](MIGRATION.md)** for upgrading from 1.x (wallet seed compatibility, Flutter-only migration, Argon2 opt-in).
 
 ## Features
 
 - **10 official wordlists** — English, Japanese, Korean, Spanish, Chinese (Simplified/Traditional), French, Italian, Czech, Portuguese
 - **Test vectors** — [Trezor English](https://github.com/trezor/python-mnemonic/blob/master/vectors.json), [Japanese BIP39](https://github.com/bip32JP/bip32JP.github.io/blob/master/test_JP_BIP39.json)
 - **Structured validation** — `validateMnemonicDetailed`, `Bip39FailureReason`, typed exceptions
-- **BIP39 seed derivation** — PBKDF2-HMAC-SHA512 (2048 iterations) + NFKD/UTF-8 encoding by default
+- **BIP39 seed derivation** — native PBKDF2-HMAC-SHA512 (2048 iterations) + NFKD/UTF-8 encoding by default
 - **Optional Argon2id** — memory-hard KDF via `Bip39SeedOptions.argon2` (not BIP39-standard)
 - **Seed encoding** — `bip39Compliant` (default) or `legacy` for 1.0.x / Trezor ASCII mnemonics
 - **Memory hygiene** — zeroize KDF intermediates, RNG entropy, and seed `Uint8List`s where possible
@@ -172,7 +175,7 @@ final ok = codec.validateMnemonicDetailed(mnemonic);
 | Argon2id (optional) | `kdf: Bip39Kdf.argon2id` or `Bip39SeedOptions.argon2` | — |
 | Argon2 cost | `argon2Params` | 64 MiB, 4 lanes, 4 iterations |
 | Zeroize KDF password/salt | `zeroizeIntermediateBuffers` | `true` |
-| Custom RNG | `randomBytes` | OS CSPRNG |
+| Custom RNG | `randomBytes` | native `SecureRandom` |
 
 Allowed strengths: `128`, `160`, `192`, `224`, `256`.
 
@@ -261,17 +264,17 @@ try {
 
 Do not log mnemonics, passphrases, or seeds. Buffer zeroization reduces heap exposure; it does not defeat swap, core dumps, or VM copies — use platform secure storage when available.
 
-## Migrating from dart-bitcoin/bip39
+## Migrating from 1.x
 
-**→ Full guide: [MIGRATION.md](MIGRATION.md)** (1.0.0 wallet treatment, golden tests, encoding migration, 1.1/1.2 features).
+**→ Full guide: [MIGRATION.md](MIGRATION.md)** (2.0.0 Flutter-only migration, 1.0.0 wallet treatment, golden tests, encoding migration).
 
-| Before (1.0.x) | After (bulltechnologies 1.2.0) |
-|----------------|--------------------------------|
+| Before (1.2.0) | After (2.0.0) |
+|----------------|---------------|
+| Dart VM / Flutter | **Flutter only** |
+| `crypto` + `pointycastle` | **native_crypto** (pinned Git SHA) |
 | `import 'package:bip39/bip39.dart'` | Same import |
-| `generateMnemonic()` | Unchanged; add `language:` as needed |
-| `mnemonicToSeed` / `mnemonicToSeedHex` | Default **bip39Compliant** + PBKDF2; **1.0.x wallets must use [Bip39SeedOptions.legacyDefaults]** |
-| English-only | Optional `Bip39Language.*` on all mnemonic APIs |
-| `WORDLIST` | Still exported; prefer `englishWords` |
+| Seed bytes | **Unchanged** with same `Bip39SeedOptions` |
+| Sync API on any isolate | **Must run on background crypto isolate** |
 
 ## Regenerating wordlists
 
@@ -286,12 +289,24 @@ CI verifies generated files stay in sync.
 ## Development
 
 ```bash
-dart pub get
-dart analyze
-dart test
+flutter pub get
+flutter analyze
+flutter test test/native_crypto_dispatch_test.dart
+bash tool/check_no_pure_dart_crypto.sh
 ```
 
-Requires Dart **≥ 3.0.0**.
+Native-backed vector and KAT suites run from the Flutter example host (after a desktop build):
+
+```bash
+cd example
+flutter pub get
+flutter build macos --debug   # or linux / windows
+flutter test integration_test/bip39_test.dart -d macos
+```
+
+CI builds Linux and runs every `integration_test/*_test.dart` file against the real native provider.
+
+Requires **Flutter ≥ 3.3.0** and **Dart ≥ 3.12.0**.
 
 ## License & attribution
 

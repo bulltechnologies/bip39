@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' show sha256;
+import 'package:native_crypto/native_crypto.dart' show Sha256;
 
 import '../bip39_constants.dart';
 import '../bip39_encoding.dart';
@@ -31,11 +31,12 @@ final class MnemonicCodec {
   static String _bytesToBinary(Uint8List bytes) =>
       bytes.map((byte) => byte.toRadixString(2).padLeft(8, '0')).join();
 
+  static final Sha256 _sha256 = Sha256();
+
   static String _deriveChecksumBits(Uint8List entropy) {
     final ent = entropy.length * 8;
     final cs = ent ~/ 32;
-    final hash = sha256.convert(entropy);
-    final hashBytes = Uint8List.fromList(hash.bytes);
+    final hashBytes = _sha256.hash(entropy);
     try {
       return _bytesToBinary(hashBytes).substring(0, cs);
     } finally {

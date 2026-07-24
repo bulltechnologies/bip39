@@ -5,14 +5,45 @@ on:
     branches: [main, master]
   pull_request:
 
+env:
+  FLUTTER_VERSION: "3.44.0"
+
 jobs:
-  test:
+  analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - run: dart analyze --fatal-infos
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
       - run: dart run tool/generate_wordlists.dart
       - run: git diff --exit-code lib/src/wordlists/generated
-      - run: dart test
+      - run: bash tool/check_no_pure_dart_crypto.sh
+      - run: flutter test test/native_crypto_dispatch_test.dart
+
+  native-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install Linux desktop toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libssl-dev xvfb
+      - run: flutter config --enable-linux-desktop
+      - run: cd example && flutter pub get
+      - run: cd example && flutter build linux --debug
+      - name: Native integration tests
+        run: |
+          cd example
+          for f in integration_test/*_test.dart; do
+            xvfb-run -a flutter test "$f" -d linux
+          done
