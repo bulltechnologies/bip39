@@ -173,8 +173,8 @@ packages:
     dependency: transitive
     description:
       path: "."
-      ref: "12c3b899d4d34da210df0fc851bac95ec99cf315"
-      resolved-ref: "12c3b899d4d34da210df0fc851bac95ec99cf315"
+      ref: "1c7fd976e8f2bd18c34c33df11b2fe6aeefb43b7"
+      resolved-ref: "1c7fd976e8f2bd18c34c33df11b2fe6aeefb43b7"
       url: "https://github.com/bulltechnologies/native_crypto.git"
     source: git
     version: "0.0.1"
