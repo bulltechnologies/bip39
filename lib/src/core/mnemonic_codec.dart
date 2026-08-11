@@ -26,19 +26,18 @@ final class MnemonicCodec {
   factory MnemonicCodec.forLanguage(Bip39Language language) =>
       MnemonicCodec(Bip39Wordlists.forLanguage(language));
 
-  static int _binaryToByte(String binary) => int.parse(binary, radix: 2);
-
-  static String _bytesToBinary(Uint8List bytes) =>
-      bytes.map((byte) => byte.toRadixString(2).padLeft(8, '0')).join();
-
   static final Sha256 _sha256 = Sha256();
 
-  static String _deriveChecksumBits(Uint8List entropy) {
-    final ent = entropy.length * 8;
-    final cs = ent ~/ 32;
+  static const int _indexMask = (1 << Bip39Wordlist.bitsPerWord) - 1;
+
+  static int _checksumBitCount(int entropyByteLength) =>
+      entropyByteLength * 8 ~/ 32;
+
+  static int _deriveChecksumValue(Uint8List entropy) {
+    final cs = _checksumBitCount(entropy.length);
     final hashBytes = _sha256.hash(entropy);
     try {
-      return _bytesToBinary(hashBytes).substring(0, cs);
+      return hashBytes[0] >> (8 - cs);
     } finally {
       zeroizeBytes(hashBytes);
     }
@@ -64,9 +63,8 @@ final class MnemonicCodec {
   /// Hex entropy string → mnemonic in [wordlist.language].
   String entropyToMnemonic(
     String entropyHex, {
-    Bip39EntropyOptions options = Bip39EntropyOptions.defaults,
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
   }) {
-    _assertLanguage(options.language);
     final entropy = decodeEntropyHex(entropyHex);
     try {
       return entropyToMnemonicFromBytes(entropy, options: options);
@@ -81,119 +79,221 @@ final class MnemonicCodec {
   /// on their buffer after this returns.
   String entropyToMnemonicFromBytes(
     Uint8List entropy, {
-    Bip39EntropyOptions options = Bip39EntropyOptions.defaults,
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
   }) {
-    _assertLanguage(options.language);
     validateEntropyBytes(entropy);
-    final entropyBits = _bytesToBinary(entropy);
-    final checksumBits = _deriveChecksumBits(entropy);
-    final bits = entropyBits + checksumBits;
-    final chunks = entropyBitChunkPattern
-        .allMatches(bits)
-        .map((match) => match.group(0)!)
-        .toList(growable: false);
+    final cs = _checksumBitCount(entropy.length);
     final separator = mnemonicWordSeparator(
       wordlist.language,
       useIdeographicSeparator: options.useIdeographicSeparator,
     );
-    return chunks
-        .map((binary) => wordlist.wordAt(_binaryToByte(binary)))
-        .join(separator);
+
+    var buffer = 0;
+    var bitsInBuffer = 0;
+    final wordParts = <String>[];
+
+    void emitIndex() {
+      bitsInBuffer -= Bip39Wordlist.bitsPerWord;
+      final index = (buffer >> bitsInBuffer) & _indexMask;
+      wordParts.add(wordlist.wordAt(index));
+    }
+
+    for (final byte in entropy) {
+      buffer = (buffer << 8) | byte;
+      bitsInBuffer += 8;
+      while (bitsInBuffer >= Bip39Wordlist.bitsPerWord) {
+        emitIndex();
+      }
+    }
+
+    final checksum = _deriveChecksumValue(entropy);
+    buffer = (buffer << cs) | checksum;
+    bitsInBuffer += cs;
+    while (bitsInBuffer >= Bip39Wordlist.bitsPerWord) {
+      emitIndex();
+    }
+
+    return wordParts.join(separator);
   }
 
   /// Mnemonic → hex entropy (checksum verified).
   String mnemonicToEntropy(
     String mnemonic, {
-    Bip39EntropyOptions options = Bip39EntropyOptions.defaults,
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
   }) {
-    _assertLanguage(options.language);
+    final decoded = tryDecodeMnemonic(mnemonic, options: options);
+    switch (decoded) {
+      case MnemonicDecodeSuccess(:final entropyBytes):
+        try {
+          return encodeBytesHex(entropyBytes);
+        } finally {
+          zeroizeBytes(entropyBytes);
+        }
+      case MnemonicDecodeFailure(:final reason, :final unknownWord):
+        _throwParseFailure(reason, unknownWord: unknownWord);
+    }
+  }
+
+  /// Mnemonic → raw entropy bytes (checksum verified).
+  ///
+  /// Returns a copy; call [zeroizeBytes] when finished.
+  Uint8List mnemonicToEntropyBytes(
+    String mnemonic, {
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
+  }) {
+    final decoded = tryDecodeMnemonic(mnemonic, options: options);
+    switch (decoded) {
+      case MnemonicDecodeSuccess(:final entropyBytes):
+        try {
+          return Uint8List.fromList(entropyBytes);
+        } finally {
+          zeroizeBytes(entropyBytes);
+        }
+      case MnemonicDecodeFailure(:final reason, :final unknownWord):
+        _throwParseFailure(reason, unknownWord: unknownWord);
+    }
+  }
+
+  /// Parses [mnemonic] without throwing or hex conversion.
+  MnemonicDecodeResult tryDecodeMnemonic(
+    String mnemonic, {
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
+  }) {
+    final parsed = _parseMnemonic(mnemonic, options: options);
+    return switch (parsed) {
+      _MnemonicParseSuccess(:final entropyBytes) =>
+        MnemonicDecodeSuccess(entropyBytes),
+      _MnemonicParseFailure(:final reason, :final unknownWord) =>
+        MnemonicDecodeFailure(reason, unknownWord: unknownWord),
+    };
+  }
+
+  /// Returns `true` when [mnemonic] is valid for this wordlist.
+  bool validateMnemonic(
+    String mnemonic, {
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
+  }) =>
+      validateMnemonicDetailed(mnemonic, options: options).isValid;
+
+  MnemonicValidationResult validateMnemonicDetailed(
+    String mnemonic, {
+    Bip39CodecOptions options = Bip39CodecOptions.defaults,
+  }) {
+    final parsed = _parseMnemonic(mnemonic, options: options);
+    switch (parsed) {
+      case _MnemonicParseSuccess(:final entropyBytes):
+        zeroizeBytes(entropyBytes);
+        return const MnemonicValidationResult.valid();
+      case _MnemonicParseFailure(:final reason, :final unknownWord):
+        return MnemonicValidationResult.invalid(
+          reason,
+          unknownWord: unknownWord,
+        );
+    }
+  }
+
+  _MnemonicParseResult _parseMnemonic(
+    String mnemonic, {
+    required Bip39CodecOptions options,
+  }) {
     final words = splitMnemonicWords(
       mnemonic,
       language: wordlist.language,
       normalizeInput: options.normalizeInput,
       normalizeWords: options.normalizeWords,
     );
-    if (words.isEmpty || words.length % 3 != 0) {
-      throw Bip39InvalidMnemonicException(
-        invalidMnemonicMessage,
-        reason: Bip39FailureReason.invalidWordCount,
-      );
+    if (words.isEmpty || !allowedMnemonicWordCounts.contains(words.length)) {
+      return _MnemonicParseFailure(Bip39FailureReason.invalidWordCount);
     }
 
-    final bits = StringBuffer();
+    final totalBits = words.length * Bip39Wordlist.bitsPerWord;
+    final entropyBitCount = totalBits * 32 ~/ 33;
+    final checksumBitCount = totalBits - entropyBitCount;
+    final entropyByteCount = entropyBitCount ~/ 8;
+
+    var buffer = 0;
+    var bitsInBuffer = 0;
+    var entropyBytesWritten = 0;
+    final entropyBytes = Uint8List(entropyByteCount);
+
     for (final word in words) {
       final index = wordlist.lookupIndex(word);
       if (index == null) {
-        throw Bip39InvalidMnemonicException(
-          invalidMnemonicMessage,
-          reason: Bip39FailureReason.unknownWord,
+        return _MnemonicParseFailure(
+          Bip39FailureReason.unknownWord,
           unknownWord: word,
         );
       }
-      bits.write(index.toRadixString(2).padLeft(Bip39Wordlist.bitsPerWord, '0'));
+
+      buffer = (buffer << Bip39Wordlist.bitsPerWord) | index;
+      bitsInBuffer += Bip39Wordlist.bitsPerWord;
+
+      while (bitsInBuffer >= 8 && entropyBytesWritten < entropyByteCount) {
+        bitsInBuffer -= 8;
+        entropyBytes[entropyBytesWritten++] = (buffer >> bitsInBuffer) & 0xFF;
+      }
     }
 
-    final bitString = bits.toString();
-    final dividerIndex = (bitString.length / 33).floor() * 32;
-    final entropyBits = bitString.substring(0, dividerIndex);
-    final checksumBits = bitString.substring(dividerIndex);
+    if (entropyBytesWritten != entropyByteCount ||
+        bitsInBuffer != checksumBitCount) {
+      return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
+    }
 
-    final entropyBytes = Uint8List.fromList(
-      entropyBytePattern
-          .allMatches(entropyBits)
-          .map((match) => _binaryToByte(match.group(0)!))
-          .toList(growable: false),
-    );
+    final checksumValue = buffer & ((1 << checksumBitCount) - 1);
 
     try {
       validateEntropyBytes(entropyBytes);
-
-      final newChecksum = _deriveChecksumBits(entropyBytes);
-      if (newChecksum != checksumBits) {
-        throw Bip39InvalidChecksumException(invalidChecksumMessage);
-      }
-
-      return entropyBytes
-          .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-          .join();
-    } finally {
-      zeroizeBytes(entropyBytes);
+    } on Bip39InvalidEntropyException {
+      return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
     }
+
+    if (checksumValue != _deriveChecksumValue(entropyBytes)) {
+      return _MnemonicParseFailure(Bip39FailureReason.invalidChecksum);
+    }
+
+    return _MnemonicParseSuccess(entropyBytes);
   }
 
-  /// Returns `true` when [mnemonic] is valid for this wordlist.
-  bool validateMnemonic(
-    String mnemonic, {
-    Bip39ValidateOptions options = Bip39ValidateOptions.defaults,
-  }) =>
-      validateMnemonicDetailed(mnemonic, options: options).isValid;
-
-  MnemonicValidationResult validateMnemonicDetailed(
-    String mnemonic, {
-    Bip39ValidateOptions options = Bip39ValidateOptions.defaults,
+  Never _throwParseFailure(
+    Bip39FailureReason reason, {
+    String? unknownWord,
   }) {
-    try {
-      mnemonicToEntropy(mnemonic, options: options.entropyOptions);
-      return const MnemonicValidationResult.valid();
-    } on Bip39InvalidMnemonicException catch (e) {
-      return MnemonicValidationResult.invalid(
-        e.reason,
-        unknownWord: e.unknownWord,
-      );
-    } on Bip39InvalidChecksumException catch (e) {
-      return MnemonicValidationResult.invalid(e.reason);
-    } on Bip39InvalidEntropyException catch (e) {
-      return MnemonicValidationResult.invalid(e.reason);
+    switch (reason) {
+      case Bip39FailureReason.unknownWord:
+        throw Bip39InvalidMnemonicException(
+          invalidMnemonicMessage,
+          reason: reason,
+          unknownWord: unknownWord,
+        );
+      case Bip39FailureReason.invalidWordCount:
+        throw Bip39InvalidMnemonicException(
+          invalidMnemonicMessage,
+          reason: reason,
+        );
+      case Bip39FailureReason.invalidChecksum:
+        throw Bip39InvalidChecksumException(invalidChecksumMessage);
+      case Bip39FailureReason.invalidEntropy:
+        throw Bip39InvalidEntropyException(invalidEntropyMessage);
+      default:
+        throw Bip39InvalidMnemonicException(
+          invalidMnemonicMessage,
+          reason: reason,
+        );
     }
   }
+}
 
-  void _assertLanguage(Bip39Language language) {
-    if (language != wordlist.language) {
-      throw ArgumentError.value(
-        language,
-        'language',
-        'Codec is bound to ${wordlist.language.fileName}',
-      );
-    }
-  }
+sealed class _MnemonicParseResult {}
+
+final class _MnemonicParseSuccess extends _MnemonicParseResult {
+  _MnemonicParseSuccess(this.entropyBytes);
+
+  final Uint8List entropyBytes;
+}
+
+final class _MnemonicParseFailure extends _MnemonicParseResult {
+  _MnemonicParseFailure(this.reason, {this.unknownWord});
+
+  final Bip39FailureReason reason;
+  final String? unknownWord;
 }
