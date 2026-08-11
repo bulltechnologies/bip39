@@ -59,6 +59,13 @@ Future<void> main() async {
         throwsA(isA<Bip39InvalidEntropyException>()),
       );
     });
+
+    test('throws for odd-length hex entropy', () {
+      expect(
+        () => entropyToMnemonic('0' * 31),
+        throwsA(isA<Bip39InvalidEntropyException>()),
+      );
+    });
   });
 
   group('validateMnemonic', () {
@@ -113,6 +120,14 @@ Future<void> main() async {
       expect(result.isValid, isFalse);
       expect(result.reason, Bip39FailureReason.invalidChecksum);
     });
+
+    test('reports invalid word count before checksum work', () {
+      final result = validateMnemonicDetailed(
+        List.filled(9, 'abandon').join(' '),
+      );
+      expect(result.isValid, isFalse);
+      expect(result.reason, Bip39FailureReason.invalidWordCount);
+    });
   });
 
   group('generateMnemonic', () {
@@ -135,6 +150,16 @@ Future<void> main() async {
       expect(
         () => generateMnemonic(strength: 136),
         throwsA(isA<Bip39InvalidStrengthException>()),
+      );
+    });
+
+    test('throws when randomBytes returns wrong length', () {
+      expect(
+        () => generateMnemonic(
+          strength: 256,
+          randomBytes: (int size) => Uint8List(16),
+        ),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
@@ -203,6 +228,54 @@ Future<void> main() async {
       expect(
         entropyToMnemonicFromBytes(Uint8List.fromList(HEX.decode(hex))),
         entropyToMnemonic(hex),
+      );
+    });
+  });
+
+  group('MnemonicCodec language inference', () {
+    test('codec-bound methods infer wordlist language from defaults', () {
+      const entropy = '00000000000000000000000000000000';
+      final codec = MnemonicCodec.forLanguage(Bip39Language.italian);
+      final mnemonic = codec.entropyToMnemonic(entropy);
+      expect(codec.validateMnemonic(mnemonic), isTrue);
+      expect(codec.mnemonicToEntropy(mnemonic), entropy);
+    });
+
+    test('tryDecodeMnemonic returns bytes without hex conversion', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      final result = MnemonicCodec.english.tryDecodeMnemonic(mnemonic);
+      expect(result, isA<MnemonicDecodeSuccess>());
+      final success = result as MnemonicDecodeSuccess;
+      try {
+        expect(success.entropyBytes.length, 16);
+      } finally {
+        success.entropyBytes.zeroize();
+      }
+    });
+  });
+
+  group('strength helpers', () {
+    test('wordCountForStrength and strengthForWordCount round-trip', () {
+      for (final strength in allowedMnemonicStrengths) {
+        final words = wordCountForStrength(strength);
+        expect(strengthForWordCount(words), strength);
+      }
+    });
+  });
+
+  group('canonicalizeMnemonic', () {
+    test('normalizes whitespace without changing seed input semantics', () {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      final canonical = canonicalizeMnemonic(
+        '  $mnemonic  ',
+        normalizeInput: true,
+      );
+      expect(canonical, mnemonic);
+      expect(
+        mnemonicToSeedHex(canonical, passphrase: 'TREZOR'),
+        mnemonicToSeedHex(mnemonic, passphrase: 'TREZOR'),
       );
     });
   });

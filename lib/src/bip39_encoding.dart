@@ -22,24 +22,72 @@ enum Bip39SeedEncoding {
   bip39Compliant,
 }
 
+final RegExp _japaneseStrictSeparator = RegExp(r'[ \u3000]+');
+final RegExp _unicodeWhitespace = RegExp(r'\s+');
+final RegExp _japaneseUnicodeWhitespace = RegExp(r'[\s\u3000]+');
+
 /// NFKD-normalize [input] per BIP39 (used before UTF-8 encoding for seeds).
 String bip39Normalize(String input) => unorm.nfkd(input);
+
+bool _isAscii(String input) {
+  for (final unit in input.codeUnits) {
+    if (unit > 0x7F) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /// NFKD-normalize a single mnemonic word before wordlist lookup.
 ///
 /// Official wordlists are stored in NFKD; IMEs often emit NFC. Normalizing
 /// words closes that gap without changing ASCII phrases.
-String normalizeMnemonicWord(String word) => bip39Normalize(word);
+String normalizeMnemonicWord(String word) =>
+    _isAscii(word) ? word : bip39Normalize(word);
 
 /// Word separator used when encoding mnemonics for [language].
+///
+/// When [useIdeographicSeparator] is null, Japanese uses U+3000 and all other
+/// languages use ASCII space — matching [Bip39CodecOptions.useIdeographicSeparator]
+/// defaults.
 String mnemonicWordSeparator(
   Bip39Language language, {
-  bool useIdeographicSeparator = false,
+  bool? useIdeographicSeparator,
 }) {
-  if (useIdeographicSeparator && language.supportsIdeographicSpace) {
+  final ideographic =
+      useIdeographicSeparator ?? language.supportsIdeographicSpace;
+  if (ideographic && language.supportsIdeographicSpace) {
     return '\u3000';
   }
   return ' ';
+}
+
+/// Returns a canonical mnemonic string for [language] without validating checksum.
+///
+/// Applies the same splitting and NFKD word normalization used by parsers when
+/// [normalizeInput] / [normalizeWords] are enabled, then rejoins with the
+/// language-appropriate separator. Seed APIs hash the original [mnemonic]
+/// string; call this explicitly before [mnemonicToSeed] when you need the
+/// canonical form to match validation input.
+String canonicalizeMnemonic(
+  String mnemonic, {
+  bool normalizeInput = false,
+  bool normalizeWords = true,
+  Bip39Language language = Bip39Language.english,
+  bool useIdeographicSeparator = true,
+}) {
+  final words = splitMnemonicWords(
+    mnemonic,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+    language: language,
+  );
+  return words.join(
+    mnemonicWordSeparator(
+      language,
+      useIdeographicSeparator: useIdeographicSeparator,
+    ),
+  );
 }
 
 /// Encode [input] for KDF password bytes per [encoding].
@@ -50,7 +98,7 @@ Uint8List encodeMnemonicForSeed(String input, Bip39SeedEncoding encoding) {
     case Bip39SeedEncoding.legacy:
       return Uint8List.fromList(input.codeUnits);
     case Bip39SeedEncoding.bip39Compliant:
-      return Uint8List.fromList(utf8.encode(bip39Normalize(input)));
+      return utf8.encode(bip39Normalize(input));
   }
 }
 
@@ -61,11 +109,9 @@ Uint8List encodeSaltForSeed(String passphrase, Bip39SeedEncoding encoding) {
   const prefix = 'mnemonic';
   switch (encoding) {
     case Bip39SeedEncoding.legacy:
-      return Uint8List.fromList(utf8.encode(prefix + passphrase));
+      return utf8.encode(prefix + passphrase);
     case Bip39SeedEncoding.bip39Compliant:
-      return Uint8List.fromList(
-        utf8.encode(bip39Normalize(prefix + passphrase)),
-      );
+      return utf8.encode(bip39Normalize(prefix + passphrase));
   }
 }
 
@@ -86,10 +132,7 @@ List<String> splitMnemonicWords(
   final List<String> raw;
   if (!normalizeInput) {
     if (language.supportsIdeographicSpace) {
-      raw = mnemonic
-          .split(RegExp(r'[\s\u3000]+'))
-          .where((word) => word.isNotEmpty)
-          .toList(growable: false);
+      raw = mnemonic.split(_japaneseStrictSeparator);
     } else {
       raw = mnemonic.split(' ');
     }
@@ -99,8 +142,8 @@ List<String> splitMnemonicWords(
       return <String>[];
     }
     final pattern = language.supportsIdeographicSpace
-        ? RegExp(r'[\s\u3000]+')
-        : RegExp(r'\s+');
+        ? _japaneseUnicodeWhitespace
+        : _unicodeWhitespace;
     raw = trimmed.split(pattern);
   }
 

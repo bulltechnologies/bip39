@@ -4,25 +4,19 @@ import 'bip39_encoding.dart';
 import 'bip39_kdf.dart';
 import 'wordlists/bip39_language.dart';
 
-/// Configuration for mnemonic generation ([generateMnemonic]).
-final class Bip39MnemonicOptions {
-  const Bip39MnemonicOptions({
-    this.language = Bip39Language.english,
-    this.strength = 128,
+/// Sentinel for [Bip39MnemonicOptions.copyWith] to distinguish omitted
+/// [randomBytes] from an explicit `null` (clear callback).
+const Object _copyWithAbsent = Object();
+
+/// Parse and encode options for a bound [MnemonicCodec] (no [language] field).
+final class Bip39CodecOptions {
+  const Bip39CodecOptions({
     this.normalizeInput = false,
     this.normalizeWords = true,
     this.useIdeographicSeparator = true,
-    this.randomBytes,
   });
 
-  /// Defaults: English, 128-bit entropy, NFKD word normalization.
-  static const Bip39MnemonicOptions defaults = Bip39MnemonicOptions();
-
-  /// Wordlist language for generated or parsed mnemonics.
-  final Bip39Language language;
-
-  /// Entropy size in bits (128, 160, 192, 224, or 256).
-  final int strength;
+  static const Bip39CodecOptions defaults = Bip39CodecOptions();
 
   /// When true, trims the phrase and splits on Unicode whitespace (and
   /// ideographic space for [Bip39Language.japanese]).
@@ -31,36 +25,70 @@ final class Bip39MnemonicOptions {
   /// NFKD-normalize each word before wordlist lookup (BIP39 wordlist form).
   final bool normalizeWords;
 
+  /// When true and the codec language is Japanese, encoded mnemonics use U+3000
+  /// between words.
+  final bool useIdeographicSeparator;
+
+  Bip39CodecOptions copyWith({
+    bool? normalizeInput,
+    bool? normalizeWords,
+    bool? useIdeographicSeparator,
+  }) =>
+      Bip39CodecOptions(
+        normalizeInput: normalizeInput ?? this.normalizeInput,
+        normalizeWords: normalizeWords ?? this.normalizeWords,
+        useIdeographicSeparator:
+            useIdeographicSeparator ?? this.useIdeographicSeparator,
+      );
+}
+
+/// Configuration for mnemonic generation ([generateMnemonic]).
+final class Bip39MnemonicOptions {
+  const Bip39MnemonicOptions({
+    this.language = Bip39Language.english,
+    this.strength = 128,
+    this.useIdeographicSeparator = true,
+    this.randomBytes,
+  });
+
+  /// Defaults: English, 128-bit entropy (12 words).
+  static const Bip39MnemonicOptions defaults = Bip39MnemonicOptions();
+
+  /// Wordlist language for the generated mnemonic.
+  final Bip39Language language;
+
+  /// Entropy size in bits (128, 160, 192, 224, or 256).
+  final int strength;
+
   /// When true and [language] is Japanese, encoded mnemonics use U+3000 between words.
   final bool useIdeographicSeparator;
 
   /// Optional CSPRNG override for tests or custom entropy sources.
+  ///
+  /// Must return exactly `strength ~/ 8` bytes. The library copies the buffer
+  /// before zeroizing it; caller-owned views (e.g. [Uint8List.sublistView]) are
+  /// not modified.
   final RandomBytes? randomBytes;
 
-  /// Entropy/codec options derived from this configuration.
-  Bip39EntropyOptions get entropyOptions => Bip39EntropyOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
+  /// Encode options passed to the bound codec when generating a mnemonic.
+  Bip39CodecOptions get codecOptions => Bip39CodecOptions(
         useIdeographicSeparator: useIdeographicSeparator,
       );
 
   Bip39MnemonicOptions copyWith({
     Bip39Language? language,
     int? strength,
-    bool? normalizeInput,
-    bool? normalizeWords,
     bool? useIdeographicSeparator,
-    RandomBytes? randomBytes,
+    Object? randomBytes = _copyWithAbsent,
   }) =>
       Bip39MnemonicOptions(
         language: language ?? this.language,
         strength: strength ?? this.strength,
-        normalizeInput: normalizeInput ?? this.normalizeInput,
-        normalizeWords: normalizeWords ?? this.normalizeWords,
         useIdeographicSeparator:
             useIdeographicSeparator ?? this.useIdeographicSeparator,
-        randomBytes: randomBytes ?? this.randomBytes,
+        randomBytes: identical(randomBytes, _copyWithAbsent)
+            ? this.randomBytes
+            : randomBytes as RandomBytes?,
       );
 }
 
@@ -80,8 +108,7 @@ final class Bip39ValidateOptions {
   /// NFKD-normalize each word before wordlist lookup.
   final bool normalizeWords;
 
-  Bip39EntropyOptions get entropyOptions => Bip39EntropyOptions(
-        language: language,
+  Bip39CodecOptions get codecOptions => Bip39CodecOptions(
         normalizeInput: normalizeInput,
         normalizeWords: normalizeWords,
       );
@@ -142,6 +169,15 @@ final class Bip39SeedOptions {
   /// The returned seed is never auto-zeroized; use [SensitiveBytes] or [zeroizeBytes].
   final bool zeroizeIntermediateBuffers;
 
+  /// Derived seed length in bytes for these options.
+  ///
+  /// [Bip39Kdf.pbkdf2] always yields 64 bytes (BIP39). [Bip39Kdf.argon2id] uses
+  /// [argon2Params.desiredKeyLength], which defaults to 64 but may differ.
+  int get derivedSeedLength => switch (kdf) {
+        Bip39Kdf.pbkdf2 => 64,
+        Bip39Kdf.argon2id => argon2Params.desiredKeyLength,
+      };
+
   Bip39SeedOptions copyWith({
     String? passphrase,
     Bip39SeedEncoding? seedEncoding,
@@ -159,18 +195,20 @@ final class Bip39SeedOptions {
       );
 }
 
-/// Configuration for entropy ↔ mnemonic conversion.
+/// Configuration for entropy ↔ mnemonic conversion via the [Bip39] facade.
 final class Bip39EntropyOptions {
   const Bip39EntropyOptions({
-    this.language = Bip39Language.english,
+    this.language,
     this.normalizeInput = false,
     this.normalizeWords = true,
     this.useIdeographicSeparator = true,
   });
 
+  /// Defaults with no explicit [language]; resolved from codec or English facade.
   static const Bip39EntropyOptions defaults = Bip39EntropyOptions();
 
-  final Bip39Language language;
+  /// When null, [MnemonicCodec] uses its bound wordlist; [Bip39] uses English.
+  final Bip39Language? language;
   final bool normalizeInput;
 
   /// NFKD-normalize each word before wordlist lookup.
@@ -178,6 +216,12 @@ final class Bip39EntropyOptions {
 
   /// Use U+3000 between words when encoding Japanese mnemonics.
   final bool useIdeographicSeparator;
+
+  Bip39CodecOptions get codecOptions => Bip39CodecOptions(
+        normalizeInput: normalizeInput,
+        normalizeWords: normalizeWords,
+        useIdeographicSeparator: useIdeographicSeparator,
+      );
 
   Bip39EntropyOptions copyWith({
     Bip39Language? language,

@@ -22,6 +22,6 @@ enum Bip39Language {
   /// Whether user input may use the ideographic space (U+3000) between words.
   ///
   /// BIP39 normalizes these to ASCII spaces before seed derivation; parsers
-  /// should accept them when [Bip39MnemonicOptions.normalizeInput] is true.
+  /// should accept them when [Bip39CodecOptions.normalizeInput] is true.
   bool get supportsIdeographicSpace => this == Bip39Language.japanese;
 }

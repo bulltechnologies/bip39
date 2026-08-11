@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Reason codes for [Bip39Exception] and validation results.
 enum Bip39FailureReason {
   invalidMnemonic,
@@ -22,10 +24,13 @@ abstract interface class Bip39Exception implements Exception {
 class Bip39InvalidMnemonicException extends ArgumentError
     implements Bip39Exception {
   Bip39InvalidMnemonicException(
-    super.message, {
+    String message, {
     this.reason = Bip39FailureReason.invalidMnemonic,
     this.unknownWord,
-  });
+  })  : _message = message,
+        super(message);
+
+  final String _message;
 
   @override
   final Bip39FailureReason reason;
@@ -34,37 +39,49 @@ class Bip39InvalidMnemonicException extends ArgumentError
   final String? unknownWord;
 
   @override
-  String get bip39Message => message as String;
+  String get bip39Message => _message;
 }
 
 /// Thrown when entropy hex or decoded bytes are out of spec.
 class Bip39InvalidEntropyException extends ArgumentError implements Bip39Exception {
-  Bip39InvalidEntropyException(super.message)
-      : reason = Bip39FailureReason.invalidEntropy;
+  Bip39InvalidEntropyException(String message)
+      : _message = message,
+        reason = Bip39FailureReason.invalidEntropy,
+        super(message);
+
+  final String _message;
 
   @override
   final Bip39FailureReason reason;
 
   @override
-  String get bip39Message => message as String;
+  String get bip39Message => _message;
 }
 
 /// Thrown when the mnemonic checksum does not match entropy.
 class Bip39InvalidChecksumException extends StateError implements Bip39Exception {
-  Bip39InvalidChecksumException(super.message)
-      : reason = Bip39FailureReason.invalidChecksum;
+  Bip39InvalidChecksumException(String message)
+      : _message = message,
+        reason = Bip39FailureReason.invalidChecksum,
+        super(message);
+
+  final String _message;
 
   @override
   final Bip39FailureReason reason;
 
   @override
-  String get bip39Message => message;
+  String get bip39Message => _message;
 }
 
 /// Thrown when [generateMnemonic] `strength` is not a supported BIP39 size.
 class Bip39InvalidStrengthException extends ArgumentError implements Bip39Exception {
-  Bip39InvalidStrengthException(super.message, this.strength)
-      : reason = Bip39FailureReason.invalidStrength;
+  Bip39InvalidStrengthException(String message, this.strength)
+      : _message = message,
+        reason = Bip39FailureReason.invalidStrength,
+        super(message);
+
+  final String _message;
 
   @override
   final Bip39FailureReason reason;
@@ -72,22 +89,67 @@ class Bip39InvalidStrengthException extends ArgumentError implements Bip39Except
   final int strength;
 
   @override
-  String get bip39Message => message as String;
+  String get bip39Message => _message;
 }
 
 /// Outcome of [validateMnemonicDetailed].
-class MnemonicValidationResult {
-  const MnemonicValidationResult.valid()
-      : isValid = true,
-        reason = null,
-        unknownWord = null;
-
-  const MnemonicValidationResult.invalid(
-    this.reason, {
+final class MnemonicValidationResult {
+  const MnemonicValidationResult._({
+    required this.isValid,
+    this.reason,
     this.unknownWord,
-  }) : isValid = false;
+  })  : assert(isValid || reason != null),
+        assert(
+          isValid ||
+              reason != Bip39FailureReason.unknownWord ||
+              unknownWord != null,
+        ),
+        assert(
+          isValid ||
+              unknownWord == null ||
+              reason == Bip39FailureReason.unknownWord,
+        );
+
+  const MnemonicValidationResult.valid() : this._(isValid: true);
+
+  factory MnemonicValidationResult.invalid(
+    Bip39FailureReason reason, {
+    String? unknownWord,
+  }) =>
+      MnemonicValidationResult._(
+        isValid: false,
+        reason: reason,
+        unknownWord: unknownWord,
+      );
 
   final bool isValid;
   final Bip39FailureReason? reason;
+  final String? unknownWord;
+}
+
+/// Outcome of [MnemonicCodec.tryDecodeMnemonic] and [Bip39.tryDecodeMnemonic].
+sealed class MnemonicDecodeResult {
+  const MnemonicDecodeResult();
+}
+
+/// Successful mnemonic decode with verified checksum.
+final class MnemonicDecodeSuccess extends MnemonicDecodeResult {
+  MnemonicDecodeSuccess(this.entropyBytes);
+
+  /// Decoded entropy bytes. Call [zeroizeBytes] when finished.
+  final Uint8List entropyBytes;
+}
+
+/// Failed mnemonic decode without throwing.
+final class MnemonicDecodeFailure extends MnemonicDecodeResult {
+  const MnemonicDecodeFailure(this.reason, {this.unknownWord})
+      : assert(
+          reason != Bip39FailureReason.unknownWord || unknownWord != null,
+        ),
+        assert(
+          unknownWord == null || reason == Bip39FailureReason.unknownWord,
+        );
+
+  final Bip39FailureReason reason;
   final String? unknownWord;
 }
