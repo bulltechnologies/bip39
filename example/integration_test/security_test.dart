@@ -3,11 +3,13 @@ import 'dart:typed_data';
 import 'package:bip39/bip39.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:native_crypto/native_crypto.dart';
 
 import 'fixtures.dart';
 
 Future<void> main() async {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  NativeCryptoTesting.allowUiIsolate();
 
   group('zeroizeBytes', () {
     test('clears all bytes', () {

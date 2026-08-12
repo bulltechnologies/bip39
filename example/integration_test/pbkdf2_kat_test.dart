@@ -11,6 +11,7 @@ Uint8List _bytes(String ascii) => Uint8List.fromList(utf8.encode(ascii));
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  NativeCryptoTesting.allowUiIsolate();
 
   group('PBKDF2-HMAC-SHA512 known-answer vectors (native provider)', () {
     test('RFC-style vector (c=4096, dkLen=64)', () {

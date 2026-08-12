@@ -1,8 +1,15 @@
+## Unreleased
+
+### Native crypto backend
+- Upgraded the pinned **[native_crypto](https://github.com/bulltechnologies/native_crypto)** backend to commit `b7565bde3f0cf196d65fbfdcdd9ca348f806450a`, including its latest native-provider hardening, native arena/output-buffer APIs, and device-bound key-enclave support.
+- Adopted native output-buffer APIs for BIP39 checksum hashing and CSPRNG entropy filling to reduce transient secret allocations.
+- Example integration tests opt into `NativeCryptoTesting.allowUiIsolate()` so real-provider KATs remain compatible with native_crypto's debug root-isolate guard.
+
 ## 2.0.0
 
 ### Native crypto backend (breaking)
 - **Flutter-only:** requires Flutter and Dart **≥ 3.12**. Dart VM-only and web targets are unsupported (no pure-Dart fallback).
-- All cryptographic primitives delegate to **[native_crypto](https://github.com/bulltechnologies/native_crypto)** (pinned to commit `12c3b89`): `SecureRandom`, `Sha256`, PBKDF2-HMAC-SHA512, and Argon2id.
+- All cryptographic primitives delegate to **[native_crypto](https://github.com/bulltechnologies/native_crypto)**: `SecureRandom`, `Sha256`, PBKDF2-HMAC-SHA512, and Argon2id.
 - Removed `crypto` and `pointycastle` dependencies and local pure-Dart KDF implementations.
 - **Seed outputs unchanged:** BIP39 encoding, NFKD normalization, wordlists, checksum logic, `Bip39Kdf`, `Bip39SeedOptions`, legacy profiles, and synchronous public APIs are preserved byte-for-byte.
 - `Bip39Argon2Params.version` remains an `int` (`Bip39Argon2Version.v10` / `v13`); mapped internally to native Argon2 version enums.

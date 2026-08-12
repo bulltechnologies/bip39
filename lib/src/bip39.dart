@@ -44,7 +44,11 @@ export 'wordlists/generated/spanish.dart' show spanishWords;
 
 final SecureRandom _defaultSecureRandom = SecureRandom();
 
-Uint8List _defaultRandomBytes(int size) => _defaultSecureRandom.bytes(size);
+Uint8List _defaultRandomBytes(int size) {
+  final bytes = Uint8List(size);
+  _defaultSecureRandom.fill(bytes);
+  return bytes;
+}
 
 /// High-level BIP39 entry point with explicit wordlist and option objects.
 ///

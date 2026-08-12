@@ -35,8 +35,9 @@ final class MnemonicCodec {
 
   static int _deriveChecksumValue(Uint8List entropy) {
     final cs = _checksumBitCount(entropy.length);
-    final hashBytes = _sha256.hash(entropy);
+    final hashBytes = Uint8List(Sha256.digestLength);
     try {
+      _sha256.hashInto(entropy, hashBytes);
       return hashBytes[0] >> (8 - cs);
     } finally {
       zeroizeBytes(hashBytes);

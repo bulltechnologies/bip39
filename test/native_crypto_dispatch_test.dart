@@ -68,7 +68,7 @@ void main() {
   group('PBKDF2 dispatch', () {
     test('uses HMAC-SHA512, 2048 iterations, and 64-byte output', () {
       final backend = _FakeBackend();
-      final pbkdf2 = PBKDF2(pbkdf2: native_crypto.Pbkdf2(backend: backend));
+      final pbkdf2 = PBKDF2(pbkdf2: native_crypto.Pbkdf2.withBackend(backend));
       final password = Uint8List.fromList([1, 2, 3]);
       final salt = Uint8List.fromList([4, 5, 6]);
 
@@ -85,7 +85,7 @@ void main() {
     test('maps Bip39Argon2Params to native Argon2id v1.3', () {
       final backend = _FakeBackend();
       final argon2 = bip39_argon2.Argon2(
-        generator: native_crypto.Argon2(backend: backend),
+        generator: native_crypto.Argon2.withBackend(backend),
       );
       const params = Bip39Argon2Params(
         iterations: 2,
@@ -113,7 +113,7 @@ void main() {
     test('maps Argon2 v1.0 version integer', () {
       final backend = _FakeBackend();
       final argon2 = bip39_argon2.Argon2(
-        generator: native_crypto.Argon2(backend: backend),
+        generator: native_crypto.Argon2.withBackend(backend),
       );
 
       argon2.processBytes(

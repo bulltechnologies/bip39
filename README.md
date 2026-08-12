@@ -271,7 +271,7 @@ Do not log mnemonics, passphrases, or seeds. Buffer zeroization reduces heap exp
 | Before (1.2.0) | After (2.0.0) |
 |----------------|---------------|
 | Dart VM / Flutter | **Flutter only** |
-| `crypto` + `pointycastle` | **native_crypto** (pinned Git SHA) |
+| `crypto` + `pointycastle` | **native_crypto** (pinned Git SHA `b7565bd`) |
 | `import 'package:bip39/bip39.dart'` | Same import |
 | Seed bytes | **Unchanged** with same `Bip39SeedOptions` |
 | Sync API on any isolate | **Must run on background crypto isolate** |

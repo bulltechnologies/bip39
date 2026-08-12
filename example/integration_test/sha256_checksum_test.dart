@@ -8,6 +8,7 @@ import 'package:native_crypto/native_crypto.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  NativeCryptoTesting.allowUiIsolate();
 
   group('SHA-256 checksum (native provider)', () {
     final sha256 = Sha256();
