@@ -1,7 +1,7 @@
 ## Unreleased
 
 ### Native crypto backend
-- Upgraded the pinned **[native_crypto](https://github.com/bulltechnologies/native_crypto)** backend to commit `b7565bde3f0cf196d65fbfdcdd9ca348f806450a`, including its latest native-provider hardening, native arena/output-buffer APIs, and device-bound key-enclave support.
+- Upgraded the pinned **[native_crypto](https://github.com/bulltechnologies/native_crypto)** backend to commit `c1f1103f4b8026c8942acbd286975da505c28502`, including its latest native-provider hardening, native arena/output-buffer APIs, and device-bound key-enclave support.
 - Adopted native output-buffer APIs for BIP39 checksum hashing and CSPRNG entropy filling to reduce transient secret allocations.
 - Example integration tests opt into `NativeCryptoTesting.allowUiIsolate()` so real-provider KATs remain compatible with native_crypto's debug root-isolate guard.
 
