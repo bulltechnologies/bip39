@@ -24,11 +24,10 @@ abstract interface class Bip39Exception implements Exception {
 class Bip39InvalidMnemonicException extends ArgumentError
     implements Bip39Exception {
   Bip39InvalidMnemonicException(
-    String message, {
+    String super.message, {
     this.reason = Bip39FailureReason.invalidMnemonic,
     this.unknownWord,
-  })  : _message = message,
-        super(message);
+  }) : _message = message;
 
   final String _message;
 
@@ -43,11 +42,11 @@ class Bip39InvalidMnemonicException extends ArgumentError
 }
 
 /// Thrown when entropy hex or decoded bytes are out of spec.
-class Bip39InvalidEntropyException extends ArgumentError implements Bip39Exception {
-  Bip39InvalidEntropyException(String message)
-      : _message = message,
-        reason = Bip39FailureReason.invalidEntropy,
-        super(message);
+class Bip39InvalidEntropyException extends ArgumentError
+    implements Bip39Exception {
+  Bip39InvalidEntropyException(String super.message)
+    : _message = message,
+      reason = Bip39FailureReason.invalidEntropy;
 
   final String _message;
 
@@ -59,11 +58,11 @@ class Bip39InvalidEntropyException extends ArgumentError implements Bip39Excepti
 }
 
 /// Thrown when the mnemonic checksum does not match entropy.
-class Bip39InvalidChecksumException extends StateError implements Bip39Exception {
-  Bip39InvalidChecksumException(String message)
-      : _message = message,
-        reason = Bip39FailureReason.invalidChecksum,
-        super(message);
+class Bip39InvalidChecksumException extends StateError
+    implements Bip39Exception {
+  Bip39InvalidChecksumException(super.message)
+    : _message = message,
+      reason = Bip39FailureReason.invalidChecksum;
 
   final String _message;
 
@@ -75,11 +74,11 @@ class Bip39InvalidChecksumException extends StateError implements Bip39Exception
 }
 
 /// Thrown when [generateMnemonic] `strength` is not a supported BIP39 size.
-class Bip39InvalidStrengthException extends ArgumentError implements Bip39Exception {
-  Bip39InvalidStrengthException(String message, this.strength)
-      : _message = message,
-        reason = Bip39FailureReason.invalidStrength,
-        super(message);
+class Bip39InvalidStrengthException extends ArgumentError
+    implements Bip39Exception {
+  Bip39InvalidStrengthException(String super.message, this.strength)
+    : _message = message,
+      reason = Bip39FailureReason.invalidStrength;
 
   final String _message;
 
@@ -98,29 +97,28 @@ final class MnemonicValidationResult {
     required this.isValid,
     this.reason,
     this.unknownWord,
-  })  : assert(isValid || reason != null),
-        assert(
-          isValid ||
-              reason != Bip39FailureReason.unknownWord ||
-              unknownWord != null,
-        ),
-        assert(
-          isValid ||
-              unknownWord == null ||
-              reason == Bip39FailureReason.unknownWord,
-        );
+  }) : assert(isValid || reason != null),
+       assert(
+         isValid ||
+             reason != Bip39FailureReason.unknownWord ||
+             unknownWord != null,
+       ),
+       assert(
+         isValid ||
+             unknownWord == null ||
+             reason == Bip39FailureReason.unknownWord,
+       );
 
   const MnemonicValidationResult.valid() : this._(isValid: true);
 
   factory MnemonicValidationResult.invalid(
     Bip39FailureReason reason, {
     String? unknownWord,
-  }) =>
-      MnemonicValidationResult._(
-        isValid: false,
-        reason: reason,
-        unknownWord: unknownWord,
-      );
+  }) => MnemonicValidationResult._(
+    isValid: false,
+    reason: reason,
+    unknownWord: unknownWord,
+  );
 
   final bool isValid;
   final Bip39FailureReason? reason;
@@ -143,12 +141,8 @@ final class MnemonicDecodeSuccess extends MnemonicDecodeResult {
 /// Failed mnemonic decode without throwing.
 final class MnemonicDecodeFailure extends MnemonicDecodeResult {
   const MnemonicDecodeFailure(this.reason, {this.unknownWord})
-      : assert(
-          reason != Bip39FailureReason.unknownWord || unknownWord != null,
-        ),
-        assert(
-          unknownWord == null || reason == Bip39FailureReason.unknownWord,
-        );
+    : assert(reason != Bip39FailureReason.unknownWord || unknownWord != null),
+      assert(unknownWord == null || reason == Bip39FailureReason.unknownWord);
 
   final Bip39FailureReason reason;
   final String? unknownWord;
