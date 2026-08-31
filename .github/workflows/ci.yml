@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure private dependency access
+        env:
+          DEPENDENCY_TOKEN: ${{ secrets.BIP_DEPENDENCY_TOKEN }}
+        run: bash tool/configure_private_dependencies.sh
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -29,6 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure private dependency access
+        env:
+          DEPENDENCY_TOKEN: ${{ secrets.BIP_DEPENDENCY_TOKEN }}
+        run: bash tool/configure_private_dependencies.sh
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
