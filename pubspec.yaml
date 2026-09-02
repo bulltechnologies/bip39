@@ -17,7 +17,7 @@ dependencies:
   native_crypto:
     git:
       url: https://github.com/bulltechnologies/native_crypto.git
-      ref: ba4e52a995639a8fd8313a392bceb7588a407f49
+      ref: dd845bc944dc7e2687c4c830faa6d676433c346f
   unorm_dart: ^0.3.0
   hex: ^0.2.0
 
