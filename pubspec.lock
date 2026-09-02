@@ -191,8 +191,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: 723f46f547129f9be7603a21dc7c85ab044edbd5
-      resolved-ref: 723f46f547129f9be7603a21dc7c85ab044edbd5
+      ref: 67966bd0c1beef0418e1e74d1750ea84f095c1e0
+      resolved-ref: 67966bd0c1beef0418e1e74d1750ea84f095c1e0
       url: "https://github.com/bulltechnologies/native_crypto.git"
     source: git
     version: "0.1.0"
