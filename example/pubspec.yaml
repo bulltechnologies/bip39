@@ -22,7 +22,7 @@ dev_dependencies:
   native_crypto:
     git:
       url: https://github.com/bulltechnologies/native_crypto.git
-      ref: b717f9b5ef50eb3048f7a5a5bf8fea79bd2bb0ec
+      ref: ad95c9a4d512cd2df5d3cb31ccdd42cd8751ad7d
 
 flutter:
   uses-material-design: true
