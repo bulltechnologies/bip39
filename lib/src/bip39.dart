@@ -46,8 +46,13 @@ final SecureRandom _defaultSecureRandom = SecureRandom();
 
 Uint8List _defaultRandomBytes(int size) {
   final bytes = Uint8List(size);
-  _defaultSecureRandom.fill(bytes);
-  return bytes;
+  try {
+    _defaultSecureRandom.fill(bytes);
+    return bytes;
+  } catch (_) {
+    zeroizeBytes(bytes);
+    rethrow;
+  }
 }
 
 /// High-level BIP39 entry point with explicit wordlist and option objects.
@@ -107,15 +112,19 @@ abstract final class Bip39 {
     MnemonicCodec.validateStrength(options.strength);
     final expectedLength = options.strength ~/ 8;
     final random = options.randomBytes ?? _defaultRandomBytes;
+    // The top-level compatibility API passes this same default explicitly.
+    // Custom callbacks retain ownership of their buffers, including views.
+    final ownsRandom = identical(random, _defaultRandomBytes);
     final raw = random(expectedLength);
     if (raw.length != expectedLength) {
+      if (ownsRandom) zeroizeBytes(raw);
       throw ArgumentError.value(
         raw.length,
         'randomBytes',
         'Expected $expectedLength bytes for strength ${options.strength}',
       );
     }
-    final entropy = Uint8List.fromList(raw);
+    final entropy = ownsRandom ? raw : Uint8List.fromList(raw);
     try {
       return codec(options.language).entropyToMnemonicFromBytes(
         entropy,
@@ -239,15 +248,13 @@ abstract final class Bip39 {
   /// [Bip39Kdf.argon2id] uses [Bip39SeedOptions.derivedSeedLength]
   /// ([Bip39Argon2Params.desiredKeyLength], default 64).
   ///
-  /// The returned [Uint8List] is a copy; call [zeroizeBytes] when finished, or
+  /// The returned [Uint8List] is caller-owned; call [zeroizeBytes] when finished, or
   /// use [mnemonicToSeedSensitive] for explicit lifecycle control.
   static Uint8List mnemonicToSeed(
     String mnemonic, {
     Bip39SeedOptions options = Bip39SeedOptions.defaults,
   }) =>
-      Uint8List.fromList(
-        _deriveSeedBytes(mnemonic, options: options),
-      );
+      _deriveSeedBytes(mnemonic, options: options);
 
   /// Same as [mnemonicToSeed] but returns a [SensitiveBytes] wrapper.
   static SensitiveBytes mnemonicToSeedSensitive(
@@ -273,8 +280,9 @@ abstract final class Bip39 {
     required Bip39SeedOptions options,
   }) {
     final password = encodeMnemonicForSeed(mnemonic, options.seedEncoding);
-    final salt = encodeSaltForSeed(options.passphrase, options.seedEncoding);
+    Uint8List? salt;
     try {
+      salt = encodeSaltForSeed(options.passphrase, options.seedEncoding);
       return switch (options.kdf) {
         Bip39Kdf.pbkdf2 => PBKDF2.instance.processBytes(password, salt),
         Bip39Kdf.argon2id => Argon2.instance.processBytes(

@@ -304,7 +304,11 @@ flutter build macos --debug   # or linux / windows
 flutter test integration_test/bip39_test.dart -d macos
 ```
 
-CI builds Linux and runs every `integration_test/*_test.dart` file against the real native provider.
+CI checks generated wordlist consistency and the native-crypto source boundary
+without resolving private dependencies or requiring a cross-repository
+credential. Run the native integration commands above locally; the coordinated
+wallet_core CI also exercises the pinned BIP39/native package graph. Standalone
+BIP39 CI does not build the native example or run its integration suites.
 
 Requires **Flutter ≥ 3.3.0** and **Dart ≥ 3.12.0**.
 

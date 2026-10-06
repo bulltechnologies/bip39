@@ -216,43 +216,50 @@ final class MnemonicCodec {
     var bitsInBuffer = 0;
     var entropyBytesWritten = 0;
     final entropyBytes = Uint8List(entropyByteCount);
-
-    for (final word in words) {
-      final index = wordlist.lookupIndex(word);
-      if (index == null) {
-        return _MnemonicParseFailure(
-          Bip39FailureReason.unknownWord,
-          unknownWord: word,
-        );
-      }
-
-      buffer = (buffer << Bip39Wordlist.bitsPerWord) | index;
-      bitsInBuffer += Bip39Wordlist.bitsPerWord;
-
-      while (bitsInBuffer >= 8 && entropyBytesWritten < entropyByteCount) {
-        bitsInBuffer -= 8;
-        entropyBytes[entropyBytesWritten++] = (buffer >> bitsInBuffer) & 0xFF;
-      }
-    }
-
-    if (entropyBytesWritten != entropyByteCount ||
-        bitsInBuffer != checksumBitCount) {
-      return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
-    }
-
-    final checksumValue = buffer & ((1 << checksumBitCount) - 1);
+    var transferred = false;
 
     try {
-      validateEntropyBytes(entropyBytes);
-    } on Bip39InvalidEntropyException {
-      return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
-    }
+      for (final word in words) {
+        final index = wordlist.lookupIndex(word);
+        if (index == null) {
+          return _MnemonicParseFailure(
+            Bip39FailureReason.unknownWord,
+            unknownWord: word,
+          );
+        }
 
-    if (checksumValue != _deriveChecksumValue(entropyBytes)) {
-      return _MnemonicParseFailure(Bip39FailureReason.invalidChecksum);
-    }
+        buffer = (buffer << Bip39Wordlist.bitsPerWord) | index;
+        bitsInBuffer += Bip39Wordlist.bitsPerWord;
 
-    return _MnemonicParseSuccess(entropyBytes);
+        while (bitsInBuffer >= 8 && entropyBytesWritten < entropyByteCount) {
+          bitsInBuffer -= 8;
+          entropyBytes[entropyBytesWritten++] = (buffer >> bitsInBuffer) & 0xFF;
+        }
+      }
+
+      if (entropyBytesWritten != entropyByteCount ||
+          bitsInBuffer != checksumBitCount) {
+        return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
+      }
+
+      final checksumValue = buffer & ((1 << checksumBitCount) - 1);
+
+      try {
+        validateEntropyBytes(entropyBytes);
+      } on Bip39InvalidEntropyException {
+        return _MnemonicParseFailure(Bip39FailureReason.invalidEntropy);
+      }
+
+      if (checksumValue != _deriveChecksumValue(entropyBytes)) {
+        return _MnemonicParseFailure(Bip39FailureReason.invalidChecksum);
+      }
+
+      final result = _MnemonicParseSuccess(entropyBytes);
+      transferred = true;
+      return result;
+    } finally {
+      if (!transferred) zeroizeBytes(entropyBytes);
+    }
   }
 
   Never _throwParseFailure(
