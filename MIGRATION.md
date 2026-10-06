@@ -1,10 +1,20 @@
 # Migration guide
 
-This document covers upgrading from **[dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) 1.0.x** through **bulltechnologies/bip39 1.1.0**, **1.2.0**, and **2.0.0**.
+This document covers upgrading from **[dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) 1.0.x** through **bulltechnologies/bip39 1.1.0**, **1.2.0**, and **2.0.1**.
 
 **Read the [1.0.0 wallet section](#wallets-created-with-dart-bitcoinbip39-100) first if you have live user funds.**
 
 ---
+
+## Upgrading from 2.0.0 to 2.0.1
+
+Seed bytes, mnemonic encoding, and the public API remain compatible. This
+release preserves caller-owned input buffers and wipes temporary entropy when
+native hashing fails. No wallet data migration is required.
+
+Use Flutter 3.44.0 or later with Dart 3.12.0 or later. iOS hosts must target iOS
+14 or later to match native_crypto. Pin the full release commit in production
+and update both the root and example dependency graphs together.
 
 ## Upgrading to 2.0.0 (native crypto backend)
 
@@ -21,7 +31,7 @@ This document covers upgrading from **[dart-bitcoin/bip39](https://github.com/da
 ### What you must do
 
 1. **Use Flutter** — add `flutter` SDK dependency; remove Dart-only VM or web targets that cannot load `native_crypto`.
-2. **Upgrade SDK** — `environment: sdk: ^3.12.0` and `flutter: ">=3.3.0"`.
+2. **Upgrade SDK** — `environment: sdk: ^3.12.0` and `flutter: ">=3.44.0"` for the current release.
 3. **Run crypto off the UI isolate** — `mnemonicToSeed`, `generateMnemonic`, and checksum validation call native FFI synchronously. Invoke them from a **persistent background crypto isolate** (see [native_crypto example](https://github.com/bulltechnologies/native_crypto/tree/main/example/lib/crypto_isolate.dart)). The library does not provide an async wrapper.
 4. **No seed migration** — existing wallets keep the same seeds when using the same `Bip39SeedOptions` profile (`legacyDefaults`, `defaults`, or `argon2`).
 
@@ -34,7 +44,7 @@ dependencies:
   bip39:
     git:
       url: https://github.com/bulltechnologies/bip39.git
-      ref: v2.0.0
+      ref: v2.0.1 # Use the full release commit SHA in production.
 ```
 
 ### Argon2 version constants

@@ -22,7 +22,7 @@ native_crypto.Argon2Version _mapArgon2Version(int version) {
 /// Argon2id seed derivation (64-byte output by default).
 class Argon2 {
   Argon2({native_crypto.Argon2? generator})
-      : _generator = generator ?? native_crypto.Argon2();
+    : _generator = generator ?? native_crypto.Argon2();
 
   final native_crypto.Argon2 _generator;
 

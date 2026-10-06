@@ -42,7 +42,9 @@ Future<void> main() async {
 
       test('entropy to mnemonic', () {
         expect(
-          bip39Normalize(Bip39.entropyToMnemonic(entropy, options: entropyOpts)),
+          bip39Normalize(
+            Bip39.entropyToMnemonic(entropy, options: entropyOpts),
+          ),
           bip39Normalize(mnemonic),
         );
       });
@@ -51,7 +53,9 @@ Future<void> main() async {
         expect(
           Bip39.validateMnemonic(
             mnemonic,
-            options: const Bip39ValidateOptions(language: Bip39Language.japanese),
+            options: const Bip39ValidateOptions(
+              language: Bip39Language.japanese,
+            ),
           ),
           isTrue,
         );

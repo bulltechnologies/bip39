@@ -28,16 +28,10 @@ final class Bip39Wordlist {
       }
       seen.add(word);
     }
-    return Bip39Wordlist._(
-      language: language,
-      words: List.unmodifiable(words),
-    );
+    return Bip39Wordlist._(language: language, words: List.unmodifiable(words));
   }
 
-  Bip39Wordlist._({
-    required this.language,
-    required this.words,
-  });
+  Bip39Wordlist._({required this.language, required this.words});
 
   /// Standard BIP39 word count per list.
   static const int wordCount = 2048;

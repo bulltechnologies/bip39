@@ -56,12 +56,11 @@ final class Bip39Argon2Params {
     int? parallelism,
     int? desiredKeyLength,
     int? version,
-  }) =>
-      Bip39Argon2Params(
-        iterations: iterations ?? this.iterations,
-        memoryKiB: memoryKiB ?? this.memoryKiB,
-        parallelism: parallelism ?? this.parallelism,
-        desiredKeyLength: desiredKeyLength ?? this.desiredKeyLength,
-        version: version ?? this.version,
-      );
+  }) => Bip39Argon2Params(
+    iterations: iterations ?? this.iterations,
+    memoryKiB: memoryKiB ?? this.memoryKiB,
+    parallelism: parallelism ?? this.parallelism,
+    desiredKeyLength: desiredKeyLength ?? this.desiredKeyLength,
+    version: version ?? this.version,
+  );
 }

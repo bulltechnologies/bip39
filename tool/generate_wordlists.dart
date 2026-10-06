@@ -7,12 +7,13 @@ void main() {
   final outDir = Directory('lib/src/wordlists/generated');
   outDir.createSync(recursive: true);
 
-  final files = srcDir
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.txt'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      srcDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.txt'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   for (final file in files) {
     final name = file.uri.pathSegments.last.replaceAll('.txt', '');
@@ -27,7 +28,8 @@ void main() {
     }
     final constName = '${_toLowerCamelCase(name)}Words';
     final escaped = words.map(_escapeDartString).join(',\n  ');
-    final content = '''
+    final content =
+        '''
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // Source: bip-0039/$name.txt (bitcoin/bips)
 // Regenerate: dart run tool/generate_wordlists.dart
@@ -60,8 +62,9 @@ const List<String> $constName = [
   }
   registry.writeln('};');
 
-  File('${outDir.path}/generated_registry.dart')
-      .writeAsStringSync(registry.toString());
+  File(
+    '${outDir.path}/generated_registry.dart',
+  ).writeAsStringSync(registry.toString());
   print('Wrote ${outDir.path}/generated_registry.dart');
 }
 

@@ -15,8 +15,7 @@ import '../wordlists/bip39_wordlists.dart';
 /// Pure BIP39 mnemonic encode/decode using a specific [Bip39Wordlist].
 final class MnemonicCodec {
   /// Codec using the English wordlist.
-  static final MnemonicCodec english =
-      MnemonicCodec(Bip39Wordlists.english);
+  static final MnemonicCodec english = MnemonicCodec(Bip39Wordlists.english);
 
   MnemonicCodec(this.wordlist);
 
@@ -45,9 +44,7 @@ final class MnemonicCodec {
   }
 
   static void validateEntropyBytes(Uint8List entropy) {
-    if (entropy.length < 16 ||
-        entropy.length > 32 ||
-        entropy.length % 4 != 0) {
+    if (entropy.length < 16 || entropy.length > 32 || entropy.length % 4 != 0) {
       throw Bip39InvalidEntropyException(invalidEntropyMessage);
     }
   }
@@ -162,8 +159,9 @@ final class MnemonicCodec {
   }) {
     final parsed = _parseMnemonic(mnemonic, options: options);
     return switch (parsed) {
-      _MnemonicParseSuccess(:final entropyBytes) =>
-        MnemonicDecodeSuccess(entropyBytes),
+      _MnemonicParseSuccess(:final entropyBytes) => MnemonicDecodeSuccess(
+        entropyBytes,
+      ),
       _MnemonicParseFailure(:final reason, :final unknownWord) =>
         MnemonicDecodeFailure(reason, unknownWord: unknownWord),
     };
@@ -173,8 +171,7 @@ final class MnemonicCodec {
   bool validateMnemonic(
     String mnemonic, {
     Bip39CodecOptions options = Bip39CodecOptions.defaults,
-  }) =>
-      validateMnemonicDetailed(mnemonic, options: options).isValid;
+  }) => validateMnemonicDetailed(mnemonic, options: options).isValid;
 
   MnemonicValidationResult validateMnemonicDetailed(
     String mnemonic, {
@@ -262,10 +259,7 @@ final class MnemonicCodec {
     }
   }
 
-  Never _throwParseFailure(
-    Bip39FailureReason reason, {
-    String? unknownWord,
-  }) {
+  Never _throwParseFailure(Bip39FailureReason reason, {String? unknownWord}) {
     switch (reason) {
       case Bip39FailureReason.unknownWord:
         throw Bip39InvalidMnemonicException(

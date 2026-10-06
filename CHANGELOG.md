@@ -1,7 +1,21 @@
 ## Unreleased
 
+## 2.0.1 - 2026-10-06
+
+### Buffer ownership and coordinated native release
+
+- Preserve custom RNG buffers and views while adopting and wiping package-owned
+  entropy exactly once, including failed random filling.
+- Return fresh caller-owned seed outputs without an additional abandoned copy.
+- Clean password scratch when salt construction fails and wipe partial entropy
+  on mnemonic parse failures without changing failure classifications.
+- Add English/Japanese/Argon2 and buffer-ownership regression coverage.
+- Align the Flutter minimum with Dart 3.12 and pin the same native_crypto release
+  as BIP32 and wallet_core. Package behavioral and native-host checks run in
+  wallet_core's authenticated dependency CI matrix.
+
 ### Native crypto backend
-- Upgraded the pinned **[native_crypto](https://github.com/bulltechnologies/native_crypto)** backend to commit `c1f1103f4b8026c8942acbd286975da505c28502`, including its latest native-provider hardening, native arena/output-buffer APIs, and device-bound key-enclave support.
+- Upgraded the pinned **[native_crypto](https://github.com/bulltechnologies/native_crypto)** backend to the coordinated 0.2.0 release, including native-provider hardening, native arena/output-buffer APIs, and device-bound key-enclave support.
 - Adopted native output-buffer APIs for BIP39 checksum hashing and CSPRNG entropy filling to reduce transient secret allocations.
 - Example integration tests opt into `NativeCryptoTesting.allowUiIsolate()` so real-provider KATs remain compatible with native_crypto's debug root-isolate guard.
 

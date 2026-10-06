@@ -4,7 +4,7 @@ Production-grade [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.me
 
 [![CI](https://github.com/bulltechnologies/bip39/actions/workflows/ci.yml/badge.svg)](https://github.com/bulltechnologies/bip39/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
-[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.3.0-blue)](pubspec.yaml)
+[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.44.0-blue)](pubspec.yaml)
 
 Maintained by **[bulltechnologies](https://github.com/bulltechnologies)** — fork of [dart-bitcoin/bip39](https://github.com/dart-bitcoin/bip39) (originally ported from [bitcoinjs/bip39](https://github.com/bitcoinjs/bip39)).
 
@@ -21,14 +21,15 @@ dependencies:
   bip39:
     git:
       url: https://github.com/bulltechnologies/bip39.git
-      ref: v2.0.0
+      ref: v2.0.1 # Production builds should pin the release's full commit SHA.
 ```
 
 ```bash
 flutter pub get
 ```
 
-Requires **Flutter ≥ 3.3.0** and **Dart ≥ 3.12.0**.
+Requires **Flutter ≥ 3.44.0** and **Dart ≥ 3.12.0**. iOS example hosts require
+iOS 14 or later, matching the native backend's deployment target.
 
 ## Quick start
 
@@ -271,7 +272,7 @@ Do not log mnemonics, passphrases, or seeds. Buffer zeroization reduces heap exp
 | Before (1.2.0) | After (2.0.0) |
 |----------------|---------------|
 | Dart VM / Flutter | **Flutter only** |
-| `crypto` + `pointycastle` | **native_crypto** (pinned Git SHA `c1f1103`) |
+| `crypto` + `pointycastle` | **native_crypto** (immutable Git pin in `pubspec.yaml`) |
 | `import 'package:bip39/bip39.dart'` | Same import |
 | Seed bytes | **Unchanged** with same `Bip39SeedOptions` |
 | Sync API on any isolate | **Must run on background crypto isolate** |
@@ -306,11 +307,12 @@ flutter test integration_test/bip39_test.dart -d macos
 
 CI checks generated wordlist consistency and the native-crypto source boundary
 without resolving private dependencies or requiring a cross-repository
-credential. Run the native integration commands above locally; the coordinated
-wallet_core CI also exercises the pinned BIP39/native package graph. Standalone
-BIP39 CI does not build the native example or run its integration suites.
+credential. The authenticated wallet_core dependency matrix checks the exact
+pinned BIP39 revision on Linux and macOS, including package analysis, unit tests,
+wordlist/source-boundary checks, and native example integration. Run the commands
+above locally as well; standalone BIP39 CI remains credential-free.
 
-Requires **Flutter ≥ 3.3.0** and **Dart ≥ 3.12.0**.
+Requires **Flutter ≥ 3.44.0** and **Dart ≥ 3.12.0**.
 
 ## License & attribution
 

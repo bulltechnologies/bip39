@@ -213,6 +213,8 @@ Future<void> main() async {
       final legacy = mnemonicToSeedHex(
         mnemonic,
         passphrase: 'café',
+        // Exercise explicit compatibility with historical seed encoding.
+        // ignore: deprecated_member_use
         seedEncoding: Bip39SeedEncoding.legacy,
       );
       final compliant = mnemonicToSeedHex(
@@ -311,10 +313,7 @@ void testVector(List<dynamic> v, int i) {
     });
 
     test('mnemonic to seed hex', () {
-      expect(
-        mnemonicToSeedHex(vmnemonic, passphrase: 'TREZOR'),
-        vseedHex,
-      );
+      expect(mnemonicToSeedHex(vmnemonic, passphrase: 'TREZOR'), vseedHex);
     });
 
     test('entropy to mnemonic', () {

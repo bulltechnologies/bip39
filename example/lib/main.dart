@@ -12,10 +12,7 @@ class Bip39ExampleApp extends StatelessWidget {
       title: 'bip39 example',
       home: Scaffold(
         appBar: AppBar(title: const Text('bip39')),
-        body: const Padding(
-          padding: EdgeInsets.all(16),
-          child: _Bip39Demo(),
-        ),
+        body: const Padding(padding: EdgeInsets.all(16), child: _Bip39Demo()),
       ),
     );
   }

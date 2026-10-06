@@ -11,10 +11,16 @@ void main() {
     test('every language has 2048 unique words', () {
       for (final language in Bip39Language.values) {
         final list = Bip39Wordlists.forLanguage(language);
-        expect(list.words.length, Bip39Wordlist.wordCount,
-            reason: language.fileName);
-        expect(list.words.toSet().length, Bip39Wordlist.wordCount,
-            reason: '${language.fileName} duplicates');
+        expect(
+          list.words.length,
+          Bip39Wordlist.wordCount,
+          reason: language.fileName,
+        );
+        expect(
+          list.words.toSet().length,
+          Bip39Wordlist.wordCount,
+          reason: '${language.fileName} duplicates',
+        );
       }
     });
 

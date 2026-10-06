@@ -32,8 +32,10 @@ export 'wordlists/bip39_wordlists.dart';
 export 'wordlists/english.dart' show WORDLIST, englishWords;
 
 // Direct access to generated word arrays per language (except English above).
-export 'wordlists/generated/chinese_simplified.dart' show chineseSimplifiedWords;
-export 'wordlists/generated/chinese_traditional.dart' show chineseTraditionalWords;
+export 'wordlists/generated/chinese_simplified.dart'
+    show chineseSimplifiedWords;
+export 'wordlists/generated/chinese_traditional.dart'
+    show chineseTraditionalWords;
 export 'wordlists/generated/czech.dart' show czechWords;
 export 'wordlists/generated/french.dart' show frenchWords;
 export 'wordlists/generated/italian.dart' show italianWords;
@@ -79,10 +81,7 @@ abstract final class Bip39 {
   static final Map<Bip39Language, MnemonicCodec> _codecs = {};
 
   static MnemonicCodec codec(Bip39Language language) =>
-      _codecs.putIfAbsent(
-        language,
-        () => MnemonicCodec.forLanguage(language),
-      );
+      _codecs.putIfAbsent(language, () => MnemonicCodec.forLanguage(language));
 
   static Bip39Language _entropyLanguage(Bip39EntropyOptions options) =>
       options.language ?? Bip39Language.english;
@@ -126,10 +125,9 @@ abstract final class Bip39 {
     }
     final entropy = ownsRandom ? raw : Uint8List.fromList(raw);
     try {
-      return codec(options.language).entropyToMnemonicFromBytes(
-        entropy,
-        options: options.codecOptions,
-      );
+      return codec(
+        options.language,
+      ).entropyToMnemonicFromBytes(entropy, options: options.codecOptions);
     } finally {
       zeroizeBytes(entropy);
     }
@@ -142,10 +140,9 @@ abstract final class Bip39 {
   }) {
     final language = _entropyLanguage(options);
     _assertEntropyLanguage(language, options);
-    return codec(language).entropyToMnemonic(
-      entropyHex,
-      options: options.codecOptions,
-    );
+    return codec(
+      language,
+    ).entropyToMnemonic(entropyHex, options: options.codecOptions);
   }
 
   static String entropyToMnemonicFromBytes(
@@ -154,10 +151,9 @@ abstract final class Bip39 {
   }) {
     final language = _entropyLanguage(options);
     _assertEntropyLanguage(language, options);
-    return codec(language).entropyToMnemonicFromBytes(
-      entropy,
-      options: options.codecOptions,
-    );
+    return codec(
+      language,
+    ).entropyToMnemonicFromBytes(entropy, options: options.codecOptions);
   }
 
   static String mnemonicToEntropy(
@@ -166,10 +162,9 @@ abstract final class Bip39 {
   }) {
     final language = _entropyLanguage(options);
     _assertEntropyLanguage(language, options);
-    return codec(language).mnemonicToEntropy(
-      mnemonic,
-      options: options.codecOptions,
-    );
+    return codec(
+      language,
+    ).mnemonicToEntropy(mnemonic, options: options.codecOptions);
   }
 
   /// Mnemonic → raw entropy bytes (checksum verified).
@@ -181,10 +176,9 @@ abstract final class Bip39 {
   }) {
     final language = _entropyLanguage(options);
     _assertEntropyLanguage(language, options);
-    return codec(language).mnemonicToEntropyBytes(
-      mnemonic,
-      options: options.codecOptions,
-    );
+    return codec(
+      language,
+    ).mnemonicToEntropyBytes(mnemonic, options: options.codecOptions);
   }
 
   /// Parses [mnemonic] without throwing or hex conversion.
@@ -194,29 +188,24 @@ abstract final class Bip39 {
   }) {
     final language = _entropyLanguage(options);
     _assertEntropyLanguage(language, options);
-    return codec(language).tryDecodeMnemonic(
-      mnemonic,
-      options: options.codecOptions,
-    );
+    return codec(
+      language,
+    ).tryDecodeMnemonic(mnemonic, options: options.codecOptions);
   }
 
   static bool validateMnemonic(
     String mnemonic, {
     Bip39ValidateOptions options = Bip39ValidateOptions.defaults,
-  }) =>
-      codec(options.language).validateMnemonic(
-        mnemonic,
-        options: options.codecOptions,
-      );
+  }) => codec(
+    options.language,
+  ).validateMnemonic(mnemonic, options: options.codecOptions);
 
   static MnemonicValidationResult validateMnemonicDetailed(
     String mnemonic, {
     Bip39ValidateOptions options = Bip39ValidateOptions.defaults,
-  }) =>
-      codec(options.language).validateMnemonicDetailed(
-        mnemonic,
-        options: options.codecOptions,
-      );
+  }) => codec(
+    options.language,
+  ).validateMnemonicDetailed(mnemonic, options: options.codecOptions);
 
   /// Returns a canonical mnemonic for [options.language] without validating checksum.
   ///
@@ -225,14 +214,13 @@ abstract final class Bip39 {
     String mnemonic, {
     Bip39CodecOptions options = Bip39CodecOptions.defaults,
     Bip39Language language = Bip39Language.english,
-  }) =>
-      encoding.canonicalizeMnemonic(
-        mnemonic,
-        normalizeInput: options.normalizeInput,
-        normalizeWords: options.normalizeWords,
-        language: language,
-        useIdeographicSeparator: options.useIdeographicSeparator,
-      );
+  }) => encoding.canonicalizeMnemonic(
+    mnemonic,
+    normalizeInput: options.normalizeInput,
+    normalizeWords: options.normalizeWords,
+    language: language,
+    useIdeographicSeparator: options.useIdeographicSeparator,
+  );
 
   /// BIP39 mnemonic word count for [strength] bits.
   static int wordCountForStrength(int strength) =>
@@ -253,8 +241,7 @@ abstract final class Bip39 {
   static Uint8List mnemonicToSeed(
     String mnemonic, {
     Bip39SeedOptions options = Bip39SeedOptions.defaults,
-  }) =>
-      _deriveSeedBytes(mnemonic, options: options);
+  }) => _deriveSeedBytes(mnemonic, options: options);
 
   /// Same as [mnemonicToSeed] but returns a [SensitiveBytes] wrapper.
   static SensitiveBytes mnemonicToSeedSensitive(
@@ -286,10 +273,10 @@ abstract final class Bip39 {
       return switch (options.kdf) {
         Bip39Kdf.pbkdf2 => PBKDF2.instance.processBytes(password, salt),
         Bip39Kdf.argon2id => Argon2.instance.processBytes(
-            password,
-            salt,
-            params: options.argon2Params,
-          ),
+          password,
+          salt,
+          params: options.argon2Params,
+        ),
       };
     } finally {
       if (options.zeroizeIntermediateBuffers) {
@@ -308,43 +295,40 @@ String generateMnemonic({
   RandomBytes randomBytes = _defaultRandomBytes,
   Bip39Language language = Bip39Language.english,
   bool useIdeographicSeparator = true,
-}) =>
-    Bip39.generateMnemonic(
-      options: Bip39MnemonicOptions(
-        strength: strength,
-        randomBytes: randomBytes,
-        language: language,
-        useIdeographicSeparator: useIdeographicSeparator,
-      ),
-    );
+}) => Bip39.generateMnemonic(
+  options: Bip39MnemonicOptions(
+    strength: strength,
+    randomBytes: randomBytes,
+    language: language,
+    useIdeographicSeparator: useIdeographicSeparator,
+  ),
+);
 
 /// See [Bip39.entropyToMnemonic].
 String entropyToMnemonic(
   String entropyString, {
   Bip39Language language = Bip39Language.english,
   bool useIdeographicSeparator = true,
-}) =>
-    Bip39.entropyToMnemonic(
-      entropyString,
-      options: Bip39EntropyOptions(
-        language: language,
-        useIdeographicSeparator: useIdeographicSeparator,
-      ),
-    );
+}) => Bip39.entropyToMnemonic(
+  entropyString,
+  options: Bip39EntropyOptions(
+    language: language,
+    useIdeographicSeparator: useIdeographicSeparator,
+  ),
+);
 
 /// See [Bip39.entropyToMnemonicFromBytes].
 String entropyToMnemonicFromBytes(
   Uint8List entropy, {
   Bip39Language language = Bip39Language.english,
   bool useIdeographicSeparator = true,
-}) =>
-    Bip39.entropyToMnemonicFromBytes(
-      entropy,
-      options: Bip39EntropyOptions(
-        language: language,
-        useIdeographicSeparator: useIdeographicSeparator,
-      ),
-    );
+}) => Bip39.entropyToMnemonicFromBytes(
+  entropy,
+  options: Bip39EntropyOptions(
+    language: language,
+    useIdeographicSeparator: useIdeographicSeparator,
+  ),
+);
 
 /// See [Bip39.mnemonicToSeed].
 ///
@@ -357,17 +341,16 @@ Uint8List mnemonicToSeed(
   Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
   Bip39Kdf kdf = Bip39Kdf.pbkdf2,
   Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
-}) =>
-    Bip39.mnemonicToSeed(
-      mnemonic,
-      options: Bip39SeedOptions(
-        passphrase: passphrase,
-        seedEncoding: seedEncoding,
-        kdf: kdf,
-        argon2Params: argon2Params,
-        zeroizeIntermediateBuffers: true,
-      ),
-    );
+}) => Bip39.mnemonicToSeed(
+  mnemonic,
+  options: Bip39SeedOptions(
+    passphrase: passphrase,
+    seedEncoding: seedEncoding,
+    kdf: kdf,
+    argon2Params: argon2Params,
+    zeroizeIntermediateBuffers: true,
+  ),
+);
 
 /// See [Bip39.mnemonicToSeedSensitive].
 SensitiveBytes mnemonicToSeedSensitive(
@@ -376,16 +359,15 @@ SensitiveBytes mnemonicToSeedSensitive(
   Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
   Bip39Kdf kdf = Bip39Kdf.pbkdf2,
   Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
-}) =>
-    Bip39.mnemonicToSeedSensitive(
-      mnemonic,
-      options: Bip39SeedOptions(
-        passphrase: passphrase,
-        seedEncoding: seedEncoding,
-        kdf: kdf,
-        argon2Params: argon2Params,
-      ),
-    );
+}) => Bip39.mnemonicToSeedSensitive(
+  mnemonic,
+  options: Bip39SeedOptions(
+    passphrase: passphrase,
+    seedEncoding: seedEncoding,
+    kdf: kdf,
+    argon2Params: argon2Params,
+  ),
+);
 
 /// See [Bip39.mnemonicToSeedHex].
 String mnemonicToSeedHex(
@@ -394,16 +376,15 @@ String mnemonicToSeedHex(
   Bip39SeedEncoding seedEncoding = Bip39SeedEncoding.bip39Compliant,
   Bip39Kdf kdf = Bip39Kdf.pbkdf2,
   Bip39Argon2Params argon2Params = Bip39Argon2Params.defaults,
-}) =>
-    Bip39.mnemonicToSeedHex(
-      mnemonic,
-      options: Bip39SeedOptions(
-        passphrase: passphrase,
-        seedEncoding: seedEncoding,
-        kdf: kdf,
-        argon2Params: argon2Params,
-      ),
-    );
+}) => Bip39.mnemonicToSeedHex(
+  mnemonic,
+  options: Bip39SeedOptions(
+    passphrase: passphrase,
+    seedEncoding: seedEncoding,
+    kdf: kdf,
+    argon2Params: argon2Params,
+  ),
+);
 
 /// See [Bip39.validateMnemonic].
 bool validateMnemonic(
@@ -411,15 +392,14 @@ bool validateMnemonic(
   bool normalizeInput = false,
   bool normalizeWords = true,
   Bip39Language language = Bip39Language.english,
-}) =>
-    Bip39.validateMnemonic(
-      mnemonic,
-      options: Bip39ValidateOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      ),
-    );
+}) => Bip39.validateMnemonic(
+  mnemonic,
+  options: Bip39ValidateOptions(
+    language: language,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  ),
+);
 
 /// See [Bip39.validateMnemonicDetailed].
 MnemonicValidationResult validateMnemonicDetailed(
@@ -427,15 +407,14 @@ MnemonicValidationResult validateMnemonicDetailed(
   bool normalizeInput = false,
   bool normalizeWords = true,
   Bip39Language language = Bip39Language.english,
-}) =>
-    Bip39.validateMnemonicDetailed(
-      mnemonic,
-      options: Bip39ValidateOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      ),
-    );
+}) => Bip39.validateMnemonicDetailed(
+  mnemonic,
+  options: Bip39ValidateOptions(
+    language: language,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  ),
+);
 
 /// See [Bip39.mnemonicToEntropy].
 String mnemonicToEntropy(
@@ -443,15 +422,14 @@ String mnemonicToEntropy(
   bool normalizeInput = false,
   bool normalizeWords = true,
   Bip39Language language = Bip39Language.english,
-}) =>
-    Bip39.mnemonicToEntropy(
-      mnemonic,
-      options: Bip39EntropyOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      ),
-    );
+}) => Bip39.mnemonicToEntropy(
+  mnemonic,
+  options: Bip39EntropyOptions(
+    language: language,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  ),
+);
 
 /// See [Bip39.mnemonicToEntropyBytes].
 Uint8List mnemonicToEntropyBytes(
@@ -459,15 +437,14 @@ Uint8List mnemonicToEntropyBytes(
   bool normalizeInput = false,
   bool normalizeWords = true,
   Bip39Language language = Bip39Language.english,
-}) =>
-    Bip39.mnemonicToEntropyBytes(
-      mnemonic,
-      options: Bip39EntropyOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      ),
-    );
+}) => Bip39.mnemonicToEntropyBytes(
+  mnemonic,
+  options: Bip39EntropyOptions(
+    language: language,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  ),
+);
 
 /// See [Bip39.tryDecodeMnemonic].
 MnemonicDecodeResult tryDecodeMnemonic(
@@ -475,18 +452,18 @@ MnemonicDecodeResult tryDecodeMnemonic(
   bool normalizeInput = false,
   bool normalizeWords = true,
   Bip39Language language = Bip39Language.english,
-}) =>
-    Bip39.tryDecodeMnemonic(
-      mnemonic,
-      options: Bip39EntropyOptions(
-        language: language,
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      ),
-    );
+}) => Bip39.tryDecodeMnemonic(
+  mnemonic,
+  options: Bip39EntropyOptions(
+    language: language,
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  ),
+);
 
 /// See [Bip39.wordCountForStrength].
 int wordCountForStrength(int strength) => Bip39.wordCountForStrength(strength);
 
 /// See [Bip39.strengthForWordCount].
-int strengthForWordCount(int wordCount) => Bip39.strengthForWordCount(wordCount);
+int strengthForWordCount(int wordCount) =>
+    Bip39.strengthForWordCount(wordCount);

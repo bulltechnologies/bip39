@@ -12,6 +12,8 @@ Future<Map<String, dynamic>> loadEnglishVectors() async {
 
 /// Loads [japanese_vectors.json] from the bip39 package asset bundle.
 Future<List<dynamic>> loadJapaneseVectors() async {
-  final body = await rootBundle.loadString('$_assetPrefix/japanese_vectors.json');
+  final body = await rootBundle.loadString(
+    '$_assetPrefix/japanese_vectors.json',
+  );
   return json.decode(body) as List<dynamic>;
 }

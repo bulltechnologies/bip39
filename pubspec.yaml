@@ -1,6 +1,6 @@
 name: bip39
 description: Production-grade Flutter implementation of Bitcoin BIP39 mnemonic codes
-version: 2.0.0
+version: 2.0.1
 homepage: https://github.com/bulltechnologies/bip39
 repository: https://github.com/bulltechnologies/bip39
 issue_tracker: https://github.com/bulltechnologies/bip39/issues
@@ -9,7 +9,7 @@ publish_to: none
 
 environment:
   sdk: ^3.12.0
-  flutter: ">=3.3.0"
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:
@@ -17,7 +17,7 @@ dependencies:
   native_crypto:
     git:
       url: https://github.com/bulltechnologies/native_crypto.git
-      ref: 50ab117c8cc7115d1137998bae4c782be673cab1
+      ref: 0a79d5cca15447f609c56e34d4606c6b8115638c
   unorm_dart: ^0.3.0
   hex: ^0.2.0
 

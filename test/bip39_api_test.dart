@@ -36,19 +36,14 @@ void main() {
       Uint8List callback(int size) => Uint8List(size);
       final withCallback = Bip39MnemonicOptions(randomBytes: callback);
       expect(withCallback.copyWith(randomBytes: null).randomBytes, isNull);
-      expect(
-        withCallback.copyWith(strength: 256).randomBytes,
-        same(callback),
-      );
+      expect(withCallback.copyWith(strength: 256).randomBytes, same(callback));
     });
   });
 
   group('MnemonicValidationResult', () {
     test('invalid requires a reason', () {
       expect(
-        () => MnemonicValidationResult.invalid(
-          Bip39FailureReason.unknownWord,
-        ),
+        () => MnemonicValidationResult.invalid(Bip39FailureReason.unknownWord),
         throwsA(isA<AssertionError>()),
       );
     });

@@ -33,13 +33,12 @@ final class Bip39CodecOptions {
     bool? normalizeInput,
     bool? normalizeWords,
     bool? useIdeographicSeparator,
-  }) =>
-      Bip39CodecOptions(
-        normalizeInput: normalizeInput ?? this.normalizeInput,
-        normalizeWords: normalizeWords ?? this.normalizeWords,
-        useIdeographicSeparator:
-            useIdeographicSeparator ?? this.useIdeographicSeparator,
-      );
+  }) => Bip39CodecOptions(
+    normalizeInput: normalizeInput ?? this.normalizeInput,
+    normalizeWords: normalizeWords ?? this.normalizeWords,
+    useIdeographicSeparator:
+        useIdeographicSeparator ?? this.useIdeographicSeparator,
+  );
 }
 
 /// Configuration for mnemonic generation ([generateMnemonic]).
@@ -71,25 +70,23 @@ final class Bip39MnemonicOptions {
   final RandomBytes? randomBytes;
 
   /// Encode options passed to the bound codec when generating a mnemonic.
-  Bip39CodecOptions get codecOptions => Bip39CodecOptions(
-        useIdeographicSeparator: useIdeographicSeparator,
-      );
+  Bip39CodecOptions get codecOptions =>
+      Bip39CodecOptions(useIdeographicSeparator: useIdeographicSeparator);
 
   Bip39MnemonicOptions copyWith({
     Bip39Language? language,
     int? strength,
     bool? useIdeographicSeparator,
     Object? randomBytes = _copyWithAbsent,
-  }) =>
-      Bip39MnemonicOptions(
-        language: language ?? this.language,
-        strength: strength ?? this.strength,
-        useIdeographicSeparator:
-            useIdeographicSeparator ?? this.useIdeographicSeparator,
-        randomBytes: identical(randomBytes, _copyWithAbsent)
-            ? this.randomBytes
-            : randomBytes as RandomBytes?,
-      );
+  }) => Bip39MnemonicOptions(
+    language: language ?? this.language,
+    strength: strength ?? this.strength,
+    useIdeographicSeparator:
+        useIdeographicSeparator ?? this.useIdeographicSeparator,
+    randomBytes: identical(randomBytes, _copyWithAbsent)
+        ? this.randomBytes
+        : randomBytes as RandomBytes?,
+  );
 }
 
 /// Configuration for mnemonic parsing and validation.
@@ -109,20 +106,19 @@ final class Bip39ValidateOptions {
   final bool normalizeWords;
 
   Bip39CodecOptions get codecOptions => Bip39CodecOptions(
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-      );
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+  );
 
   Bip39ValidateOptions copyWith({
     Bip39Language? language,
     bool? normalizeInput,
     bool? normalizeWords,
-  }) =>
-      Bip39ValidateOptions(
-        language: language ?? this.language,
-        normalizeInput: normalizeInput ?? this.normalizeInput,
-        normalizeWords: normalizeWords ?? this.normalizeWords,
-      );
+  }) => Bip39ValidateOptions(
+    language: language ?? this.language,
+    normalizeInput: normalizeInput ?? this.normalizeInput,
+    normalizeWords: normalizeWords ?? this.normalizeWords,
+  );
 }
 
 /// Configuration for seed derivation ([mnemonicToSeed]).
@@ -174,9 +170,9 @@ final class Bip39SeedOptions {
   /// [Bip39Kdf.pbkdf2] always yields 64 bytes (BIP39). [Bip39Kdf.argon2id] uses
   /// [argon2Params.desiredKeyLength], which defaults to 64 but may differ.
   int get derivedSeedLength => switch (kdf) {
-        Bip39Kdf.pbkdf2 => 64,
-        Bip39Kdf.argon2id => argon2Params.desiredKeyLength,
-      };
+    Bip39Kdf.pbkdf2 => 64,
+    Bip39Kdf.argon2id => argon2Params.desiredKeyLength,
+  };
 
   Bip39SeedOptions copyWith({
     String? passphrase,
@@ -184,15 +180,14 @@ final class Bip39SeedOptions {
     Bip39Kdf? kdf,
     Bip39Argon2Params? argon2Params,
     bool? zeroizeIntermediateBuffers,
-  }) =>
-      Bip39SeedOptions(
-        passphrase: passphrase ?? this.passphrase,
-        seedEncoding: seedEncoding ?? this.seedEncoding,
-        kdf: kdf ?? this.kdf,
-        argon2Params: argon2Params ?? this.argon2Params,
-        zeroizeIntermediateBuffers:
-            zeroizeIntermediateBuffers ?? this.zeroizeIntermediateBuffers,
-      );
+  }) => Bip39SeedOptions(
+    passphrase: passphrase ?? this.passphrase,
+    seedEncoding: seedEncoding ?? this.seedEncoding,
+    kdf: kdf ?? this.kdf,
+    argon2Params: argon2Params ?? this.argon2Params,
+    zeroizeIntermediateBuffers:
+        zeroizeIntermediateBuffers ?? this.zeroizeIntermediateBuffers,
+  );
 }
 
 /// Configuration for entropy ↔ mnemonic conversion via the [Bip39] facade.
@@ -218,24 +213,23 @@ final class Bip39EntropyOptions {
   final bool useIdeographicSeparator;
 
   Bip39CodecOptions get codecOptions => Bip39CodecOptions(
-        normalizeInput: normalizeInput,
-        normalizeWords: normalizeWords,
-        useIdeographicSeparator: useIdeographicSeparator,
-      );
+    normalizeInput: normalizeInput,
+    normalizeWords: normalizeWords,
+    useIdeographicSeparator: useIdeographicSeparator,
+  );
 
   Bip39EntropyOptions copyWith({
     Bip39Language? language,
     bool? normalizeInput,
     bool? normalizeWords,
     bool? useIdeographicSeparator,
-  }) =>
-      Bip39EntropyOptions(
-        language: language ?? this.language,
-        normalizeInput: normalizeInput ?? this.normalizeInput,
-        normalizeWords: normalizeWords ?? this.normalizeWords,
-        useIdeographicSeparator:
-            useIdeographicSeparator ?? this.useIdeographicSeparator,
-      );
+  }) => Bip39EntropyOptions(
+    language: language ?? this.language,
+    normalizeInput: normalizeInput ?? this.normalizeInput,
+    normalizeWords: normalizeWords ?? this.normalizeWords,
+    useIdeographicSeparator:
+        useIdeographicSeparator ?? this.useIdeographicSeparator,
+  );
 }
 
 /// Generates cryptographically secure random bytes.
