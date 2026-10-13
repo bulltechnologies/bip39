@@ -1,5 +1,13 @@
 ## Unreleased
 
+## 2.0.2 - 2026-10-13
+
+### Coordinated native dependency
+
+- Pin Native Crypto 0.2.1 at `4de5f63783c95613eacf2e4c666a1c69db86ead9`
+  so BIP39, BIP32 and WalletCore 0.3.0 resolve one immutable native backend.
+- Preserve mnemonic encoding, wordlists, seed derivation and public API behavior.
+
 ## 2.0.1 - 2026-10-06
 
 ### Buffer ownership and coordinated native release
