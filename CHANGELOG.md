@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Pin the shared Native Crypto backend to `b5379db81dd60fc5efcf38393cd2d96e0afb90c4`,
+  which keeps an existing device-unlocked NativeKeyEnclave key usable after the
+  user removes the lock screen. Mnemonic encoding, wordlists, seed derivation,
+  buffer ownership and the public API remain unchanged.
 - Pin the shared Native Crypto backend to `20e56493086222f6a04920868675d85ec5ae86c1`
   for its checksum-verified OpenSSL 3.5.9 security update. Mnemonic encoding,
   wordlists, seed derivation, buffer ownership and the public API remain unchanged.
